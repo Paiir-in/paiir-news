@@ -84,13 +84,13 @@ t('categories and India tags', () => {
 });
 t('Hacker News link text is not used as a snippet', () => assert.equal(news.stories.find(s => s.source === 'Hacker News').snippet, ''));
 t('share pages exist with escaped preview tags', () => {
-  const s = news.stories.find(x => x.title.startsWith('OpenAI')), html = fs.readFileSync(path.join(OUT, 's', s.id, 'index.html'), 'utf8');
+  const s = news.stories.find(x => x.title.startsWith('OpenAI')), html = fs.readFileSync(path.join(OUT, 's', s.id + '.html'), 'utf8');
   assert.match(html, /<meta property="og:title" content="OpenAI raises \$10B &amp; more – India push">/);
   assert.match(html, /<meta property="og:image" content="https:\/\/a\.example\/one\.jpg">/);
   assert.match(html, /<meta property="og:site_name" content="Paiir News">/);
   assert.match(html, /twitter:card" content="summary_large_image"/);
   const noimg = news.stories.find(x => x.title.startsWith('Data image'));
-  assert.match(fs.readFileSync(path.join(OUT, 's', noimg.id, 'index.html'), 'utf8'), /og:image" content="https:\/\/paiir\.in\/news\/brand\/og-default\.png"/);
+  assert.match(fs.readFileSync(path.join(OUT, 's', noimg.id + '.html'), 'utf8'), /og:image" content="https:\/\/paiir\.in\/news\/brand\/og-default\.png"/);
 });
 t('share page escapes hostile text', () => {
   const h = sharePage({ id: 'abcdef0123', title: '"><script>x</script>', snippet: '', source: 'S', image: 'javascript:alert(1)' }, 'https://paiir.in/news', 'https://paiir.in/news/brand/og-default.png');
@@ -103,22 +103,24 @@ const late = NOW + 40 * 864e5;
 await run({ fetch: async (u) => (u === 'https://feeds.test/a' ? { ok: false, status: 500, text: async () => '' } : fakeFetch(false)(u)), out: OUT, cache: CACHE, base: 'https://paiir.in/news', sources: SOURCES, log: quiet, now: late, skipPage: true });
 t('share pages older than 30 days are removed', () => {
   const one = news.stories.find(x => x.title.startsWith('OpenAI'));
-  assert.equal(fs.existsSync(path.join(OUT, 's', one.id)), false);
+  assert.equal(fs.existsSync(path.join(OUT, 's', one.id + '.html')), false);
 });
 // a fresh build on GitHub starts from an empty folder: the stories and share pages come back from the cache
 const FRESH = path.join(OUT, 'fresh');
-const r3 = await run({ fetch: fakeFetch(true), out: FRESH, cache: CACHE, base: 'https://news.paiir.in', sources: SOURCES, log: quiet, now: late + 36e5, skipPage: true });
+const r3 = await run({ fetch: fakeFetch(true), out: FRESH, cache: CACHE, base: 'https://paiir.in/news', sources: SOURCES, log: quiet, now: late + 36e5, skipPage: true });
 t('a fresh build with every feed down still publishes the last good stories and their share pages', () => {
   assert.equal(r3.ok, false);
   const d = JSON.parse(fs.readFileSync(path.join(FRESH, 'news.json'), 'utf8'));
   assert.ok(d.stories.length > 0);
-  assert.ok(d.stories.every(s => fs.existsSync(path.join(FRESH, 's', s.id, 'index.html'))));
+  assert.ok(d.stories.every(s => fs.existsSync(path.join(FRESH, 's', s.id + '.html'))));
 });
-t('page addresses are filled in for news.paiir.in', () => {
-  const P = path.join(OUT, 'page'); publishPage(P, 'https://news.paiir.in', 'https://paiir.in/');
+t('page addresses are filled in for paiir.in/news', () => {
+  const P = path.join(OUT, 'page'); publishPage(P, 'https://paiir.in/news', 'https://paiir.in/');
   const html = fs.readFileSync(path.join(P, 'index.html'), 'utf8'), js = fs.readFileSync(path.join(P, 'news.js'), 'utf8');
-  assert.ok(!/\{\{(HOME|BASE)\}\}/.test(html + js));
-  assert.ok(html.includes('og:image" content="https://news.paiir.in/brand/og-default.png"'));
+  assert.ok(!/\{\{(HOME|BASE|PATH)\}\}/.test(html + js));
+  assert.ok(html.includes('og:image" content="https://paiir.in/news/brand/og-default.png"'));
+  assert.ok(html.includes('href="/news/news.css"') && js.includes("fetch('/news/news.json?t='"));
+  assert.ok(js.includes("'https://paiir.in/news/s/'"));
   assert.ok(html.includes('href="https://paiir.in/#bridge"'));
   assert.ok(js.includes("'https://paiir.in/#founder-hub'"));
 });

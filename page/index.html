@@ -6,8 +6,8 @@
 <title>Paiir News · Tech news, every hour</title>
 <meta name="description" content="The latest from trusted tech sources, in one place. Free to read, always linked to the original.">
 <meta name="theme-color" content="#FFFFFF">
-<link rel="icon" href="brand/paiir-mark.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="brand/paiir-app-icon.png">
+<link rel="icon" href="{{PATH}}brand/paiir-mark.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="{{PATH}}brand/paiir-app-icon.png">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Paiir News">
 <meta property="og:title" content="Paiir News · Tech news, every hour">
@@ -18,13 +18,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400..800;1,400..800&display=swap">
-<link rel="stylesheet" href="news.css">
+<link rel="stylesheet" href="{{PATH}}news.css">
 </head>
 <body>
 <a class="skip" href="#feed">Skip to the stories</a>
 <header class="nh">
   <div class="nw nh-in">
-    <a class="nh-logo" href="{{HOME}}" aria-label="Paiir home"><picture><source srcset="brand/paiir-logo-on-dark.svg" media="(prefers-color-scheme: dark)"><img src="brand/paiir-logo-on-light.svg" alt="Paiir" width="84" height="40"></picture></a>
+    <a class="nh-logo" href="{{HOME}}" aria-label="Paiir home"><picture><source srcset="{{PATH}}brand/paiir-logo-on-dark.svg" media="(prefers-color-scheme: dark)"><img src="{{PATH}}brand/paiir-logo-on-light.svg" alt="Paiir" width="84" height="40"></picture></a>
     <span class="nh-tag">News</span>
     <nav class="nh-nav" aria-label="Paiir News">
       <a class="nh-link" href="#explore">Explore Paiir</a>
@@ -63,14 +63,14 @@
     </nav>
     <canvas class="nf-dots" id="dots" aria-hidden="true"></canvas>
     <div class="nf-bottom">
-      <a class="nf-logo" href="{{HOME}}" aria-label="Paiir home"><img src="brand/paiir-logo-on-dark.svg" alt="Paiir" width="76" height="36"></a>
+      <a class="nf-logo" href="{{HOME}}" aria-label="Paiir home"><img src="{{PATH}}brand/paiir-logo-on-dark.svg" alt="Paiir" width="76" height="36"></a>
       <span>© 2026 Paiir · Made in India</span>
     </div>
   </div>
 </footer>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="news.js" defer></script>
-<script src="dots.js" defer></script>
+<script src="{{PATH}}news.js" defer></script>
+<script src="{{PATH}}dots.js" defer></script>
 </body>
 </html>

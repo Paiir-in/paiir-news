@@ -1,8 +1,8 @@
 // Paiir News: fetch every feed, clean and merge the stories, and publish the page.
-//   npm run news      builds _site for news.paiir.in (what the hourly GitHub Action runs)
+//   npm run news      builds _site for paiir.in/news (what the hourly GitHub Action runs)
 //   npm run dev       the same build on this computer, served at localhost:5600 (dev.mjs)
 //   npm run site      the same build inside the main site's preview at localhost:5500/news/ (site.mjs)
-// Writes <out>/news.json, one small share page per story at <out>/s/<id>/index.html (kept 30 days) and the page files
+// Writes <out>/news.json, one small share page per story at <out>/s/<id>.html (kept 30 days) and the page files
 // from ./page. If one feed fails the others still update (its stories from the last run are kept for a day); if every
 // feed fails, the last good news.json is kept. Costs nothing: public feeds only, no keys.
 // Settings (environment): NEWS_OUT (folder), NEWS_BASE (public address of the news page), NEWS_HOME (paiir.in, for the
@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { SOURCES, parseFeed, cleanUrl, idOf, titleKey, categorise, ogImage, sharePage, safeUrl, cleanDomain } from './lib.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const UA = 'Mozilla/5.0 (compatible; PaiirNews/1.0; +https://news.paiir.in/)';
+const UA = 'Mozilla/5.0 (compatible; PaiirNews/1.0; +https://paiir.in/news/)';
 const KEEP = 80, SHARE_DAYS = 30, STALE_HOURS = 24, DAY = 864e5;
 
 const readJSON = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
@@ -22,19 +22,21 @@ async function pool(list, n, fn) { let i = 0; await Promise.all(Array.from({ len
 export function settings(o = {}) {
   return {
     out: path.resolve(o.out || process.env.NEWS_OUT || path.join(HERE, '_site')),
-    base: (o.base || process.env.NEWS_BASE || 'https://news.paiir.in').replace(/\/+$/, ''),
+    base: (o.base || process.env.NEWS_BASE || 'https://paiir.in/news').replace(/\/+$/, ''),
     home: o.home || process.env.NEWS_HOME || 'https://paiir.in/',
     cache: path.resolve(o.cache || process.env.NEWS_CACHE || path.join(HERE, '.cache'))
   };
 }
-// the page files, with the addresses filled in ({{HOME}} = paiir.in, {{BASE}} = the news page itself)
+// the page files, with the addresses filled in ({{HOME}} = paiir.in, {{BASE}} = the news page itself, {{PATH}} = its
+// path, so its files load the same with or without a trailing slash)
 export function publishPage(out, base, home) {
+  const at = new URL(base + '/').pathname;
   const copy = (a, b) => {
     fs.mkdirSync(b, { recursive: true });
     for (const e of fs.readdirSync(a, { withFileTypes: true })) {
       const s = path.join(a, e.name), d = path.join(b, e.name);
       if (e.isDirectory()) copy(s, d);
-      else if (/\.(html|js|css)$/.test(e.name)) fs.writeFileSync(d, fs.readFileSync(s, 'utf8').replace(/\{\{HOME\}\}/g, home).replace(/\{\{BASE\}\}/g, base));
+      else if (/\.(html|js|css)$/.test(e.name)) fs.writeFileSync(d, fs.readFileSync(s, 'utf8').replace(/\{\{HOME\}\}/g, home).replace(/\{\{BASE\}\}/g, base).replace(/\{\{PATH\}\}/g, at));
       else fs.copyFileSync(s, d);
     }
   };
@@ -48,8 +50,12 @@ function writeShares(out, cache, base, now, latest) {
   const live = new Set((latest || []).map(s => s.id));
   Object.keys(arc).forEach(k => { if (now - arc[k].first > SHARE_DAYS * DAY && !live.has(k)) delete arc[k]; });
   const ogDefault = base + '/brand/og-default.png', sdir = path.join(out, 's');
-  Object.keys(arc).forEach(k => { if (arc[k].story) writeAtomic(path.join(sdir, k, 'index.html'), sharePage(arc[k].story, base, ogDefault)); });
-  if (fs.existsSync(sdir)) for (const d of fs.readdirSync(sdir)) if (/^[a-f0-9]{10}$/.test(d) && !arc[d]) fs.rmSync(path.join(sdir, d), { recursive: true, force: true });
+  // s/<id>.html, served at /s/<id> (GitHub Pages and both local previews drop the .html)
+  Object.keys(arc).forEach(k => { if (arc[k].story) writeAtomic(path.join(sdir, k + '.html'), sharePage(arc[k].story, base, ogDefault)); });
+  if (fs.existsSync(sdir)) for (const d of fs.readdirSync(sdir)) {
+    const m = /^([a-f0-9]{10})(\.html)?$/.exec(d);
+    if (m && (!m[2] || !arc[m[1]])) fs.rmSync(path.join(sdir, d), { recursive: true, force: true });
+  }
   writeAtomic(path.join(cache, 'shares.json'), JSON.stringify(arc));
   return Object.keys(arc).length;
 }

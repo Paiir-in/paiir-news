@@ -120,13 +120,13 @@ export function categorise(title, snip, src) {
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // the tiny page behind every share link: preview tags for WhatsApp, LinkedIn and X, then on to the story on the news page
 export function sharePage(st, base, ogDefault) {
-  const url = base.replace(/\/+$/, '') + '/s/' + st.id + '/', img = safeUrl(st.image) || ogDefault, back = '../../?s=' + encodeURIComponent(st.id);
+  const root = base.replace(/\/+$/, ''), url = root + '/s/' + st.id, img = safeUrl(st.image) || ogDefault, back = root + '/?s=' + encodeURIComponent(st.id);
   const desc = st.snippet || ('From ' + st.source + ' on Paiir News.');
   return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n' +
     '<title>' + esc(st.title) + ' · Paiir News</title>\n<meta name="description" content="' + esc(desc) + '">\n<meta name="robots" content="noindex">\n' +
     '<meta property="og:type" content="article"><meta property="og:site_name" content="Paiir News">\n<meta property="og:title" content="' + esc(st.title) + '">\n<meta property="og:description" content="' + esc(desc) + '">\n' +
     '<meta property="og:image" content="' + esc(img) + '">\n<meta property="og:url" content="' + esc(url) + '">\n<meta name="twitter:card" content="summary_large_image">\n<meta name="twitter:title" content="' + esc(st.title) + '">\n<meta name="twitter:image" content="' + esc(img) + '">\n' +
-    '<link rel="canonical" href="' + esc(url) + '"><link rel="icon" href="../../brand/paiir-mark.svg" type="image/svg+xml">\n' +
+    '<link rel="canonical" href="' + esc(url) + '"><link rel="icon" href="' + esc(root + '/brand/paiir-mark.svg') + '" type="image/svg+xml">\n' +
     '<style>body{margin:0;display:grid;place-items:center;min-height:100vh;font:16px/1.5 Figtree,system-ui,sans-serif;color:#111318;background:#FFFFFF}a{color:#0A6CFF}</style></head>\n' +
     '<body><p><a href="' + esc(back) + '">' + esc(st.title) + ' · Open on Paiir News</a></p>\n<script>location.replace(' + JSON.stringify(back) + ');</script></body></html>\n';
 }

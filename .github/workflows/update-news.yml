@@ -1,5 +1,6 @@
-# Paiir News: fetch the news every hour and publish news.paiir.in on GitHub Pages. Free for a public repository:
-# public feeds, no keys, no paid services. Nothing is committed each hour; the site is published straight from the build.
+# Paiir News: fetch the news every hour and publish it on GitHub Pages. paiir.in/news shows it (the paiir.in site
+# passes /news through to this Pages site). Free for a public repository: public feeds, no keys, no paid services.
+# Nothing is committed each hour; the site is published straight from the build.
 name: Update news
 
 on:
@@ -18,6 +19,10 @@ permissions:
 concurrency:
   group: pages
   cancel-in-progress: false
+
+env:
+  NEWS_BASE: https://paiir.in/news # where visitors see the page, and where share links point
+  NEWS_HOME: https://paiir.in/ # the main site, for the links back
 
 jobs:
   build:

@@ -29,7 +29,6 @@
   var $ = function (id) { return document.getElementById(id); };
   var feed = $('feed'), more = $('more'), moreBtn = $('moreBtn'), chips = $('chips'), sharedBox = $('shared'), updated = $('updated'), toastEl = $('toast');
   var S = { data: null, cat: 'All', n: STEP, list: [] };
-  var BASE = new URL('./', location.href);
 
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function icon(n) { var s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('fill', 'none'); s.setAttribute('stroke', 'currentColor'); s.setAttribute('stroke-width', '1.75'); s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round'); s.setAttribute('aria-hidden', 'true'); s.innerHTML = ICONS[n]; return s; }
@@ -43,7 +42,7 @@
     var d = Math.round(h / 24); if (d < 7) return d + 'd ago';
     return new Date(t).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
   }
-  function shareUrl(id) { return new URL('s/' + encodeURIComponent(id) + '/', BASE).href; }
+  function shareUrl(id) { return '{{BASE}}/s/' + encodeURIComponent(id); }
   function letter(name, cls) { var p = el('span', 'ph' + (cls ? ' ' + cls : ''), (String(name || 'P').trim()[0] || 'P').toUpperCase()); p.setAttribute('aria-hidden', 'true'); return p; }
   function picture(src, name) {
     var u = safe(src); if (!u) return letter(name);
@@ -146,7 +145,7 @@
       b.appendChild(acts); box.appendChild(b); sharedBox.appendChild(box);
     }
     var strip = el('a', 'new-strip'); strip.href = '#explore';
-    var mk = el('img'); mk.src = 'brand/paiir-mark.svg'; mk.alt = ''; strip.appendChild(mk);
+    var mk = el('img'); mk.src = '{{PATH}}brand/paiir-mark.svg'; mk.alt = ''; strip.appendChild(mk);
     var t = el('span'); t.appendChild(el('b', '', 'New to Paiir? ')); t.appendChild(document.createTextNode('Sell what you know. Find who you need.')); strip.appendChild(t); strip.appendChild(icon('arrow'));
     sharedBox.appendChild(strip);
   }
@@ -192,7 +191,7 @@
   function tick() { if (S.data) updated.textContent = 'Updated ' + ago(S.data.updated); }
   function load() {
     skeleton(); more.hidden = true;
-    fetch('news.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (d) {
+    fetch('{{PATH}}news.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (d) {
       if (!d || !Array.isArray(d.stories) || !d.stories.length) throw new Error('empty');
       S.data = d; S.n = STEP; tick(); showShared(); render();
     }).catch(function () {

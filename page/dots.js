@@ -11,7 +11,7 @@
     return new Promise(function (ok) {
       var img = new Image(); img.onload = function () { ok(img); };
       img.onerror = function () { var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="38 34 124 114"><path d="M82 46 V78" fill="none" stroke="#0A6CFF" stroke-width="24" stroke-linecap="round"/><path d="M50 110 C70 148 130 148 150 110" fill="none" stroke="#0A6CFF" stroke-width="24" stroke-linecap="round"/></svg>'; var f = new Image(); f.onload = function () { ok(f); }; f.src = 'data:image/svg+xml,' + encodeURIComponent(s); };
-      img.src = 'brand/paiir-mark.svg';
+      img.src = '{{PATH}}brand/paiir-mark.svg';
     });
   }
   function build() {
