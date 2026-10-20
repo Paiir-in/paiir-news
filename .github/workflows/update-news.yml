@@ -1,0 +1,78 @@
+# Paiir News: fetch the news every hour and publish news.paiir.in on GitHub Pages. Free for a public repository:
+# public feeds, no keys, no paid services. Nothing is committed each hour; the site is published straight from the build.
+name: Update news
+
+on:
+  schedule:
+    - cron: "7 * * * *" # every hour, at 7 minutes past
+  workflow_dispatch: # the "Run workflow" button
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: write # only to keep the hourly schedule switched on (see the last build step)
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # memory between runs: the last good news.json, images already found and 30 days of share pages
+      - name: Restore memory from the last run
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache
+          key: news-cache-${{ github.run_id }}
+          restore-keys: news-cache-
+
+      - name: Check the feed script
+        run: npm test
+
+      - name: Fetch the news and build the site
+        run: npm run news
+
+      - name: Save memory for the next run
+        uses: actions/cache/save@v4
+        with:
+          path: .cache
+          key: news-cache-${{ github.run_id }}
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      # GitHub pauses scheduled workflows in a repository with no activity for 60 days. Since the hourly run commits
+      # nothing, switch the schedule on again once a day so it never goes to sleep.
+      - name: Keep the hourly schedule switched on
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(date -u +%H)" = "00" ]; then
+            gh api -X PUT "repos/${{ github.repository }}/actions/workflows/update-news.yml/enable" || true
+          fi
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

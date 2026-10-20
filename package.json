@@ -1,0 +1,14 @@
+{
+  "name": "paiir-news",
+  "private": true,
+  "description": "Paiir News: free, hourly tech news from public feeds, published on GitHub Pages at news.paiir.in",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "news": "node fetch-news.mjs",
+    "dev": "node dev.mjs",
+    "test": "node test-news.mjs",
+    "site": "node site.mjs",
+    "og": "node make-og.mjs"
+  }
+}
