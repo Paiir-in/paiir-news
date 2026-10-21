@@ -47,7 +47,7 @@ export function publishPage(out, base, home) {
 function writeShares(out, cache, base, now, latest, home) {
   const raw = readJSON(path.join(cache, 'shares.json'), {}), arc = {};
   Object.keys(raw).forEach(k => { const v = raw[k]; arc[k] = typeof v === 'number' ? { first: v } : v; });
-  (latest || []).forEach(s => { arc[s.id] = { first: (arc[s.id] && arc[s.id].first) || now, story: s }; });
+  (latest || []).forEach(s => { const old = arc[s.id] && arc[s.id].story; arc[s.id] = { first: (arc[s.id] && arc[s.id].first) || now, story: s.body || !old || !old.body ? s : Object.assign({}, s, { body: old.body }) }; });
   const live = new Set((latest || []).map(s => s.id));
   Object.keys(arc).forEach(k => { if (now - arc[k].first > SHARE_DAYS * DAY && !live.has(k)) delete arc[k]; });
   const ogDefault = base + '/brand/og-default.png', sdir = path.join(out, 's');
@@ -95,7 +95,7 @@ export async function run(o = {}) {
     const link = cleanUrl(it.link); if (!link) continue;
     const c = categorise(it.title, it.snippet, it.src);
     if (it.published && now - Date.parse(it.published) > (it.src.days || MAX_DAYS) * DAY) continue;
-    add({ id: idOf(link), title: it.title.slice(0, 220), link, source: it.src.name, domain: cleanDomain(it.src.domain), published: it.published || new Date(now).toISOString(), snippet: it.snippet, summary: it.summary || it.snippet, image: it.image, category: c.category, tags: c.tags });
+    add({ id: idOf(link), title: it.title.slice(0, 220), link, source: it.src.name, domain: cleanDomain(it.src.domain), published: it.published || new Date(now).toISOString(), snippet: it.snippet, summary: it.summary || it.snippet, body: it.body, image: it.image, category: c.category, tags: c.tags });
   }
   if (prev && Array.isArray(prev.stories)) prev.stories.filter(s => failed.has(s.source) && now - Date.parse(s.published) < STALE_HOURS * 36e5).forEach(add);
   stories.sort((a, b) => Date.parse(b.published) - Date.parse(a.published));
@@ -126,7 +126,7 @@ export async function run(o = {}) {
   writeAtomic(path.join(cache, 'images.json'), JSON.stringify(imgCache));
 
   // 4. news.json (and a copy in the cache for the next run)
-  const data = { updated: new Date(now).toISOString(), count: latest.length, sources: report.map(r => ({ name: r.name, domain: r.domain, ok: r.ok, count: r.count })), stories: latest };
+  const data = { updated: new Date(now).toISOString(), count: latest.length, sources: report.map(r => ({ name: r.name, domain: r.domain, ok: r.ok, count: r.count })), stories: latest.map(s => { const o = Object.assign({}, s); delete o.body; return o; }) };
   writeAtomic(path.join(out, 'news.json'), JSON.stringify(data));
   writeAtomic(path.join(cache, 'last-news.json'), JSON.stringify(data));
 

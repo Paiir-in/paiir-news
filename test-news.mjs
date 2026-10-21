@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { run, publishPage } from './fetch-news.mjs';
-import { parseFeed, snippet, cleanUrl, sharePage } from './lib.mjs';
+import { parseFeed, snippet, cleanUrl, sharePage, bodyText } from './lib.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url)), OUT = path.join(HERE, '.test-out'), CACHE = path.join(OUT, '.cache');
 const NOW = Date.parse('2026-10-21T12:00:00Z');
@@ -88,6 +88,16 @@ t('categories and India tags', () => {
 t('every story has a summary for the phone cards, at least as long as its snippet', () => {
   assert.ok(news.stories.every(s => typeof s.summary === 'string' && s.summary.length >= s.snippet.length && s.summary.length <= 430));
   assert.equal(news.stories.find(s => s.title.startsWith('New iPhone')).summary, 'We tried the new phone. It is fast.');
+});
+t('story pages get the publisher\'s longer feed text: paragraphs, about 15 lines at most, ending on a sentence', () => {
+  const html = '<p>' + 'One sentence sits here. '.repeat(8) + '</p><figure><img src="https://a.example/p.jpg"><figcaption>A caption that should not be shown</figcaption></figure>' +
+    '<p>A second paragraph with enough words in it.</p><p>The post Something big appeared first on Some Site.</p><p>' + 'Another long sentence keeps going. '.repeat(60) + '</p>';
+  const b = bodyText(html), all = b.join(' ');
+  assert.ok(b.length >= 3, 'paragraphs kept apart');
+  assert.ok(all.length <= 1400, 'about 15 lines at most');
+  assert.ok(!all.includes('caption') && !/appeared first on/.test(all), 'no captions or feed footers');
+  assert.match(b[b.length - 1], /[.!?]$/, 'ends on a full sentence');
+  assert.ok(!fs.readFileSync(path.join(OUT, 'news.json'), 'utf8').includes('"body"'), 'news.json stays light');
 });
 t('Hacker News link text is not used as a snippet', () => assert.equal(news.stories.find(s => s.source === 'Hacker News').snippet, ''));
 t('story pages exist with the story and escaped preview tags', () => {

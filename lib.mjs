@@ -49,6 +49,24 @@ export function summary(s, max = 420) {
   const cut = t.slice(0, max), end = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('? '), cut.lastIndexOf('! '));
   return end > max * 0.5 ? cut.slice(0, end + 1) : snippet(t, max);
 }
+// the story page's text (owner, 2026-10-21: "make it atleast 10 - 15 lines readable"): the publisher's own feed text in
+// paragraphs, up to about 15 lines (1,400 characters), ending on a full sentence; captions, "Read more" and "appeared
+// first on" lines left out
+export function bodyText(s, max = 1400) {
+  let h = cdata(s);
+  if (/&lt;\s*[a-z/!]/i.test(h) && !/<[a-z/!]/i.test(h)) h = decode(h);
+  h = h.replace(/<(figure|figcaption|script|style|noscript|iframe|table)\b[\s\S]*?<\/\1>/gi, ' ');
+  const paras = h.split(/<\/p>|<br\s*\/?>\s*<br\s*\/?>|<\/h\d>|<\/li>|<\/blockquote>|\n\s*\n/i).map(p => snippet(p, 100000))
+    .filter(p => p.length > 25 && !/^(Article URL|Comments URL|Points:|# Comments)/i.test(p));
+  const out = []; let n = 0;
+  for (const p of paras) {
+    if (n + p.length <= max) { out.push(p); n += p.length; continue; }
+    const room = max - n, cut = p.slice(0, room), end = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('? '), cut.lastIndexOf('! '));
+    if (room > 120 && end > 60) out.push(cut.slice(0, end + 1));
+    break;
+  }
+  return out;
+}
 export function snippet(s, max = 160) {
   let t = plain(s).replace(/The post .{3,300}? appeared first on .{2,80}?\.?$/i, '').replace(/\s*(Read more|Continue reading|Read the full story)\b.*$/i, '').trim();
   if (/^Article URL:/i.test(t)) t = '';
@@ -108,7 +126,7 @@ export function parseFeed(xml, base) {
     const when = Date.parse(plain(tag(it, 'pubDate') || tag(it, 'published') || tag(it, 'updated') || tag(it, 'dc:date')));
     const short = tag(it, 'description') || tag(it, 'summary') || tag(it, 'content:encoded') || tag(it, 'content'), long = tag(it, 'content:encoded') || tag(it, 'content') || short;
     const sum = summary(long), sumShort = summary(short);
-    out.push({ title, link, published: isFinite(when) ? new Date(when).toISOString() : '', snippet: snippet(short), summary: sum.length > sumShort.length ? sum : sumShort, image: sharper(imageOf(it, base)) });
+    out.push({ title, link, published: isFinite(when) ? new Date(when).toISOString() : '', snippet: snippet(short), summary: sum.length > sumShort.length ? sum : sumShort, body: bodyText(long), image: sharper(imageOf(it, base)) });
   }
   return out;
 }
@@ -172,6 +190,8 @@ export function storyPage(st, base, home, ogDefault) {
   const shareIc = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>';
   const arrow = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>';
   const back = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>';
+  // the publisher's longer feed text when it says more than the summary
+  const body = Array.isArray(st.body) && st.body.join(' ').length > String(st.summary || '').length + 40 ? st.body : [];
   const data = JSON.stringify({ id: st.id, category: cat, tags, title: st.title, published: st.published || '' }).replace(/</g, '\\u003c');
   return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n' +
     '<title>' + esc(st.title) + ' · Paiir News</title>\n<meta name="description" content="' + esc(desc) + '">\n<meta name="robots" content="noindex">\n' +
@@ -192,10 +212,10 @@ export function storyPage(st, base, home, ogDefault) {
     '<div class="src">' + fav + '<b>' + esc(st.source) + '</b>' + (date ? '<span>·</span><time datetime="' + esc(st.published) + '">' + esc(date) + '</time>' : '') + (cat ? '<span class="cat-sep">·</span><a class="cat" href="' + esc(root + '/?t=' + encodeURIComponent(cat)) + '">' + esc(cat) + '</a>' : '') + '</div>\n' +
     '<h1 class="sp-t">' + esc(st.title) + '</h1>\n' +
     (pic ? '<figure class="sp-fig"><img src="' + esc(pic) + '" alt="" referrerpolicy="no-referrer" decoding="async"><figcaption>Picture: ' + esc(st.source) + '</figcaption></figure>\n' : '') +
-    '<p class="sp-sum">' + esc(st.summary || st.snippet || '') + '</p>\n' +
+    (body.length ? '<div class="sp-body">' + body.map(p => '<p>' + esc(p) + '</p>').join('') + '</div>\n' : '<p class="sp-sum">' + esc(st.summary || st.snippet || '') + '</p>\n') +
     '<div class="sp-acts">' + (link ? '<a class="btn btn-pri sp-read" href="' + esc(link) + '" target="_blank" rel="noopener noreferrer">Read the full story at ' + esc(st.source) + ext + '</a>' : '') +
     '<button type="button" class="btn btn-sec sp-share" data-share>' + shareIc + 'Share</button></div>\n' +
-    '<p class="sp-note">A short summary by Paiir News. The full story and its pictures belong to ' + esc(st.source) + '.</p>\n' +
+    '<p class="sp-note">' + (body.length ? 'From ' + esc(st.source) + '. ' : 'A short summary by Paiir News. ') + 'The full story and its pictures belong to ' + esc(st.source) + '.</p>\n' +
     (tags.length ? '<div class="sp-tags">' + tags.map(t => '<a href="' + esc(root + '/?t=' + encodeURIComponent(t)) + '">' + esc(t) + '</a>').join('') + '</div>\n' : '') +
     '</article>\n<aside class="sp-side" aria-label="Sponsored">\n<div class="sp-ad"><div class="sp-ad-k"><span>Sponsored</span><span class="sp-ex">Example</span></div>' +
     '<div class="sp-ad-c"><div class="sp-ad-top"><span class="sp-ad-logo" aria-hidden="true">YB</span><span><b>Your brand</b><small>Your offer for Paiir readers</small></span></div>' +

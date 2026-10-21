@@ -516,3 +516,7 @@ a.nh-tag { text-decoration: none; }
 @media (max-width: 960px) { .sp-g { grid-template-columns: minmax(0, 1fr); gap: 32px; } .sp-side { position: static; max-width: 420px; } .sp-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .sp { padding-top: 14px; } .sp-list { grid-template-columns: minmax(0, 1fr); } .sp-acts .btn { flex: 1 1 100%; } .sp-side { max-width: none; } }
 .sp-art .src .cat, .sp-art .src .cat-sep { display: inline; }
+/* the story page's text: the publisher's longer feed text, in paragraphs (up to about 15 lines) */
+.sp-body p { margin: 0 0 1.05em; font-size: clamp(17.5px, 1.4vw, 19px); line-height: 1.75; color: var(--text); }
+.sp-body p:first-child { font-size: clamp(18.5px, 1.5vw, 20.5px); }
+.sp-body p:last-child { margin-bottom: 0; }
