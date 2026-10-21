@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400..800;1,400..800&display=swap">
-<link rel="stylesheet" href="{{PATH}}news.css">
+<link rel="stylesheet" href="{{PATH}}news.css?v={{V}}">
 </head>
 <body>
 <a class="skip" href="#feed">Skip to the stories</a>
@@ -32,7 +32,7 @@
       <button type="button" class="dim-btn" id="dimBtn" aria-pressed="false" title="A warmer, softer light for reading">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg><span>Dim light</span>
       </button>
-      <a class="nh-home" href="{{HOME}}" aria-label="Paiir home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>Home</span></a>
+      <a class="nh-home" href="{{HOME}}" aria-label="Paiir home"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>Home</span></a>
     </div>
   </div>
 </header>
@@ -82,6 +82,6 @@
 </footer>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="{{PATH}}news.js" defer></script>
+<script src="{{PATH}}news.js?v={{V}}" defer></script>
 </body>
 </html>

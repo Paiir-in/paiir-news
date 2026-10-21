@@ -177,7 +177,9 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&a
 // publishers' full text and photos would need their permission. The same page carries the preview tags for WhatsApp,
 // LinkedIn and X. story.js adds the related stories (from news.json), Dim light, share and "2h ago".
 const SP_TIME = { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' };
-export function storyPage(st, base, home, ogDefault) {
+export function storyPage(st, base, home, ogDefault, ver) {
+  // the page's own files load from this site's path (paiir.in and www.paiir.in alike), versioned so a release shows at once
+  const at = new URL(base.replace(/\/+$/, '') + '/').pathname, v = ver ? '?v=' + encodeURIComponent(ver) : '';
   const root = base.replace(/\/+$/, ''), url = root + '/s/' + st.id, pic = sharper(safeUrl(st.image)), link = safeUrl(st.link);
   const img = pic ? 'https://wsrv.nl/?url=' + encodeURIComponent(pic) + '&w=1200&h=630&fit=cover&a=attention&output=jpg&q=65' : ogDefault;
   const desc = st.snippet || ('From ' + st.source + ' on Paiir News.'), when = Date.parse(st.published);
@@ -202,12 +204,12 @@ export function storyPage(st, base, home, ogDefault) {
     '<script>try { if (localStorage.getItem(\'paiir-news-dim\') === \'1\') document.documentElement.classList.add(\'dim\'); } catch (e) {}</script>\n' +
     '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
     '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400..800;1,400..800&amp;display=swap">\n' +
-    '<link rel="stylesheet" href="' + esc(root + '/news.css') + '">\n</head>\n<body class="sp-page">\n' +
+    '<link rel="stylesheet" href="' + esc(at + 'news.css' + v) + '">\n</head>\n<body class="sp-page">\n' +
     '<a class="skip" href="#story">Skip to the story</a>\n' +
-    '<header class="nh"><div class="nw nh-in"><a class="nh-logo" href="' + esc(home) + '" aria-label="Paiir home"><img src="' + esc(root + '/brand/paiir-logo-on-dark.svg') + '" alt="Paiir" width="84" height="40"></a>' +
+    '<header class="nh"><div class="nw nh-in"><a class="nh-logo" href="' + esc(home) + '" aria-label="Paiir home"><img src="' + esc(at + 'brand/paiir-logo-on-dark.svg') + '" alt="Paiir" width="84" height="40"></a>' +
     '<a class="nh-tag" href="' + esc(root + '/') + '"><i aria-hidden="true"></i>News</a><div class="nh-right">' +
     '<button type="button" class="dim-btn" id="dimBtn" aria-pressed="false" title="A warmer, softer light for reading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg><span>Dim light</span></button>' +
-    '<a class="nh-home" href="' + esc(home) + '" aria-label="Paiir home"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\"/><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg><span>Home</span></a></div></div></header>\n' +
+    '<a class="nh-home" href="' + esc(home) + '" aria-label="Paiir home"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\"/><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg><span>Home</span></a></div></div></header>\n' +
     '<main class="nw sp" id="story">\n<a class="sp-back" href="' + esc(root + '/') + '">' + back + 'All news</a>\n<div class="sp-g">\n<article class="sp-art">\n' +
     '<div class="src">' + fav + '<b>' + esc(st.source) + '</b>' + (date ? '<span>·</span><time datetime="' + esc(st.published) + '">' + esc(date) + '</time>' : '') + (cat ? '<span class="cat-sep">·</span><a class="cat" href="' + esc(root + '/?t=' + encodeURIComponent(cat)) + '">' + esc(cat) + '</a>' : '') + '</div>\n' +
     '<h1 class="sp-t">' + esc(st.title) + '</h1>\n' +
@@ -226,7 +228,7 @@ export function storyPage(st, base, home, ogDefault) {
     '<a class="btn btn-sec sp-all" href="' + esc(root + '/') + '">See all the news' + arrow + '</a></section>\n</main>\n' +
     '<footer class="sp-foot"><div class="nw"><span>Paiir News · News you care about, every hour</span><a href="' + esc(home) + '">paiir.in</a></div></footer>\n' +
     '<div class="toast" id="toast" role="status" aria-live="polite"></div>\n' +
-    '<script>window.PAIIR_STORY = ' + data + ';</script>\n<script src="' + esc(root + '/story.js') + '" defer></script>\n</body></html>\n';
+    '<script>window.PAIIR_STORY = ' + data + ';</script>\n<script src="' + esc(at + 'story.js' + v) + '" defer></script>\n</body></html>\n';
 }
 // the old name, for anything that still calls it
-export const sharePage = (st, base, ogDefault, home) => storyPage(st, base, home || 'https://paiir.in/', ogDefault);
+export const sharePage = (st, base, ogDefault, home, ver) => storyPage(st, base, home || 'https://paiir.in/', ogDefault, ver);

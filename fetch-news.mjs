@@ -10,6 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 import { SOURCES, parseFeed, cleanUrl, idOf, titleKey, categorise, ogImage, storyPage, safeUrl, cleanDomain } from './lib.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -27,16 +28,22 @@ export function settings(o = {}) {
     cache: path.resolve(o.cache || process.env.NEWS_CACHE || path.join(HERE, '.cache'))
   };
 }
+// a fingerprint of the page files: every link to them carries it (?v=), so a release reaches readers at once
+export function pageVersion() {
+  const h = createHash('sha1');
+  for (const f of ['news.css', 'news.js', 'story.js', 'index.html']) { const p = path.join(HERE, 'page', f); if (fs.existsSync(p)) h.update(fs.readFileSync(p)); }
+  return h.digest('hex').slice(0, 10);
+}
 // the page files, with the addresses filled in ({{HOME}} = paiir.in, {{BASE}} = the news page itself, {{PATH}} = its
-// path, so its files load the same with or without a trailing slash)
+// path, so its files load the same with or without a trailing slash, {{V}} = the fingerprint)
 export function publishPage(out, base, home) {
-  const at = new URL(base + '/').pathname;
+  const at = new URL(base + '/').pathname, ver = pageVersion();
   const copy = (a, b) => {
     fs.mkdirSync(b, { recursive: true });
     for (const e of fs.readdirSync(a, { withFileTypes: true })) {
       const s = path.join(a, e.name), d = path.join(b, e.name);
       if (e.isDirectory()) copy(s, d);
-      else if (/\.(html|js|css)$/.test(e.name)) fs.writeFileSync(d, fs.readFileSync(s, 'utf8').replace(/\{\{HOME\}\}/g, home).replace(/\{\{BASE\}\}/g, base).replace(/\{\{PATH\}\}/g, at));
+      else if (/\.(html|js|css)$/.test(e.name)) fs.writeFileSync(d, fs.readFileSync(s, 'utf8').replace(/\{\{HOME\}\}/g, home).replace(/\{\{BASE\}\}/g, base).replace(/\{\{PATH\}\}/g, at).replace(/\{\{V\}\}/g, ver));
       else fs.copyFileSync(s, d);
     }
   };
@@ -52,7 +59,7 @@ function writeShares(out, cache, base, now, latest, home) {
   Object.keys(arc).forEach(k => { if (now - arc[k].first > SHARE_DAYS * DAY && !live.has(k)) delete arc[k]; });
   const ogDefault = base + '/brand/og-default.png', sdir = path.join(out, 's');
   // s/<id>.html, served at /s/<id> (GitHub Pages and both local previews drop the .html)
-  Object.keys(arc).forEach(k => { if (arc[k].story) writeAtomic(path.join(sdir, k + '.html'), storyPage(arc[k].story, base, home, ogDefault)); });
+  Object.keys(arc).forEach(k => { if (arc[k].story) writeAtomic(path.join(sdir, k + '.html'), storyPage(arc[k].story, base, home, ogDefault, pageVersion())); });
   if (fs.existsSync(sdir)) for (const d of fs.readdirSync(sdir)) {
     const m = /^([a-f0-9]{10})(\.html)?$/.exec(d);
     if (m && (!m[2] || !arc[m[1]])) fs.rmSync(path.join(sdir, d), { recursive: true, force: true });

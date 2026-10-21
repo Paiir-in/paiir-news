@@ -110,7 +110,8 @@ t('story pages exist with the story and escaped preview tags', () => {
   assert.ok(!html.includes('location.replace('), 'the story page is a page, not a redirect');
   assert.match(html, /<h1 class="sp-t">OpenAI raises \$10B &amp; more – India push<\/h1>/);
   assert.ok(html.includes('href="' + s.link + '" target="_blank" rel="noopener noreferrer">Read the full story at ' + s.source), 'it links on to the publisher');
-  assert.ok(html.includes('<script src="https://paiir.in/news/story.js" defer></script>'), 'story.js adds more stories, Dim light and share');
+  assert.match(html, /<script src="\/news\/story\.js\?v=[a-f0-9]{10}" defer><\/script>/, 'story.js (versioned, from this site) adds more stories, Dim light and share');
+  assert.match(html, /<link rel="stylesheet" href="\/news\/news\.css\?v=[a-f0-9]{10}">/, 'news.css versioned, so a release shows at once');
   assert.ok(html.includes('class="sp-ad"') && html.includes('Sponsored'), 'a clearly marked sponsored slot');
   assert.ok(html.includes('class="nh-home"'), 'a Home button in the header');
   const noimg = news.stories.find(x => x.title.startsWith('Data image'));
@@ -144,9 +145,11 @@ t('a fresh build with every feed down still publishes the last good stories and 
 t('page addresses are filled in for paiir.in/news', () => {
   const P = path.join(OUT, 'page'); publishPage(P, 'https://paiir.in/news', 'https://paiir.in/');
   const html = fs.readFileSync(path.join(P, 'index.html'), 'utf8'), js = fs.readFileSync(path.join(P, 'news.js'), 'utf8');
-  assert.ok(!/\{\{(HOME|BASE|PATH)\}\}/.test(html + js));
+  assert.ok(!/\{\{(HOME|BASE|PATH|V)\}\}/.test(html + js));
   assert.ok(html.includes('og:image" content="https://paiir.in/news/brand/og-default.png"'));
-  assert.ok(html.includes('href="/news/news.css"') && js.includes("fetch('/news/news.json?t='"));
+  assert.match(html, /href="\/news\/news\.css\?v=[a-f0-9]{10}"/, 'the stylesheet is versioned, so a release shows at once');
+  assert.match(html, /src="\/news\/news\.js\?v=[a-f0-9]{10}"/, 'the script is versioned too');
+  assert.ok(js.includes("fetch('/news/news.json?t='"));
   assert.ok(js.includes("NEWS = 'https://paiir.in/news/'") && js.includes("HOME = 'https://paiir.in/'"));
   assert.ok(html.includes('href="https://paiir.in/#bridge"'));
 });
