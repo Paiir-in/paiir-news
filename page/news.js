@@ -39,6 +39,13 @@
   };
   var TOPICS = [['AI', 'cpu'], ['Startups', 'rocket'], ['Economy', 'trend'], ['Design', 'palette'], ['Gadgets', 'phone'], ['Apps', 'grid'], ['Security', 'shield'], ['Science', 'flask'], ['Health', 'pulse'], ['Sex education', 'heart'], ['India', 'pin']];
   ICONS.megaphone = '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>';
+  ICONS.cal = '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>';
+  ICONS.play = '<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>';
+  ICONS.file = '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>';
+  ICONS.clock = '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>';
+  ICONS.moon = '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>';
+  ICONS.badge = '<path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/>';
+  ICONS.user = '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>';
   ICONS.image = '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>';
   var STEP = 20, NEWS = '{{BASE}}/', HOME = '{{HOME}}', KEY = 'paiir-news-topics', MAIL = 'contact@paiir.in';
   // what Paiir does, between the stories (in turn)
@@ -129,11 +136,52 @@
     } else art.classList.add('noimg');
     art.appendChild(a); art.appendChild(shareBtn(s)); return art;
   }
+  // ---- pictures for Paiir's own cards: small scenes drawn in the page, so they stay crisp and follow Dim light ----
+  function h(tag, cls, kids) { var e = el(tag, cls); (kids || []).forEach(function (k) { if (k) e.appendChild(typeof k === 'string' ? document.createTextNode(k) : k); }); return e; }
+  function ico(n, cls) { var w = el('span', cls || 'pa-i'); w.appendChild(icon(n)); return w; }
+  var ART = {
+    link: function () {
+      var r = function (i, t, sub, pr) { return h('div', 'pa-row', [ico(i), h('span', 'pa-rt', [h('b', '', [t]), h('small', '', [sub])]), h('b', 'pa-pr', [pr])]); };
+      return h('div', 'pa-scene pa-sell', [
+        h('div', 'pa-card pa-page', [h('span', 'pa-url', ['paiir.in/', h('b', '', ['you'])]), r('cal', '1:1 call', '45 min', '₹1,499'), r('play', 'Video course', '12 lessons', '₹2,999'), r('file', 'Template kit', 'PDF', '₹799')]),
+        h('div', 'pa-card pa-toast', [ico('check', 'pa-ok'), h('span', '', [h('b', '', ['New booking']), h('small', '', ['Paid by UPI'])])]),
+        h('span', 'pa-chip pa-green', ['You keep 93%'])]);
+    },
+    rocket: function () {
+      var c = function (cls, tag, t, sub) { return h('div', 'pa-card pa-prog ' + cls, [h('span', 'pa-tag', [tag]), h('b', '', [t]), h('small', '', [sub])]); };
+      return h('div', 'pa-scene pa-hub', [c('p3', 'Credits', 'Cloud credits', 'For your stack'), c('p2', 'Scheme', 'State startup policy', 'Support and rebates'), c('p1', 'Grant', 'Seed fund for startups', 'Up to ₹50 lakh'),
+        h('span', 'pa-chip pa-warm', [ico('clock', 'pa-ci'), 'Closes in 12 days'])]);
+    },
+    users: function () {
+      return h('div', 'pa-scene pa-mentor', [
+        h('span', 'pa-av a1', [ico('user', 'pa-ai')]), h('span', 'pa-av a2', [ico('user', 'pa-ai')]), h('span', 'pa-av a3', [ico('user', 'pa-ai')]),
+        h('div', 'pa-card pa-book', [h('div', 'pa-who', [h('span', 'pa-av pa-me', [ico('user', 'pa-ai')]), h('span', '', [h('b', '', ['Talk to someone who’s done it']), h('small', '', [ico('badge', 'pa-vi'), 'Verified mentor'])])]),
+          h('div', 'pa-slots', [h('span', '', ['Mon 10:00']), h('span', 'on', ['Tue 18:30']), h('span', '', ['Thu 12:00'])]), h('span', 'pa-btn', ['Book a call'])]),
+        h('span', 'pa-chip', ['Coming soon'])]);
+    },
+    bridge: function () {
+      return h('div', 'pa-scene pa-bridge', [
+        h('div', 'pa-pass', [h('div', 'pa-ph', [h('span', '', ['Paiir · Founder Passport']), h('i', '', [])]), h('b', 'pa-pn', ['Your startup']),
+          h('div', 'pa-pf', [h('span', '', [h('small', '', ['Stage']), h('b', '', ['Seed'])]), h('span', '', [h('small', '', ['Sector']), h('b', '', ['SaaS'])]), h('span', '', [h('small', '', ['Batch']), h('b', '', ['01'])])]),
+          h('span', 'pa-ver', [ico('badge', 'pa-vi'), 'Verified by Paiir'])]),
+        h('div', 'pa-card pa-ring', [ico('check', 'pa-ri'), h('small', '', ['Strong fit'])])]);
+    },
+    topics: function () {
+      return h('div', 'pa-scene pa-topics', [h('div', 'pa-cloud', [['AI', 1], ['Design', 1], ['Economy', 0], ['Startups', 0], ['Health', 1], ['Science', 0], ['Sex education', 0], ['India', 1]].map(function (t) { return h('span', 'pa-tp' + (t[1] ? ' on' : ''), [t[1] ? ico('check', 'pa-tc') : null, t[0]]); }))]);
+    },
+    ad: function () { var w = h('div', 'pa-scene pa-adw', [adSample()]); return w; },
+    end: function () {
+      return h('div', 'pa-scene pa-end', [h('span', 'pa-star s1'), h('span', 'pa-star s2'), h('span', 'pa-star s3'), h('span', 'pa-star s4'), h('span', 'pa-moon', [ico('moon', 'pa-mi')]),
+        h('span', 'pa-chip', [ico('clock', 'pa-ci'), 'Fresh stories every hour'])]);
+    }
+  };
+  function art(key) { var w = el('div', 'pa-art'); w.setAttribute('aria-hidden', 'true'); w.appendChild(ART[key]()); return w; }
+  function fromPaiir(label) { var r = el('div', 'src'), m = el('img', 'fav'); m.src = '{{PATH}}brand/paiir-mark.svg'; m.alt = ''; r.appendChild(m); r.appendChild(el('b', '', 'Paiir')); r.appendChild(el('span', '', '·')); r.appendChild(el('span', 'cat', label || 'From Paiir')); return r; }
+  // on computers, between the stories: the picture as a banner, then the words
   function promo(i) {
-    var p = PROMOS[i % PROMOS.length], a = el('a', 'promo'); a.href = HOME + p[4];
-    a.appendChild(ic(p[0]));
-    var t = el('div'), k = el('span', 'promo-k'); k.appendChild(el('i')); k.appendChild(document.createTextNode('From Paiir')); t.appendChild(k);
-    t.appendChild(el('b', '', p[1])); t.appendChild(el('p', '', p[2]));
+    var p = PROMOS[i % PROMOS.length], a = el('a', 'promo promo-v'); a.href = HOME + p[4];
+    a.appendChild(art(p[0]));
+    var t = el('div', 'promo-b'); t.appendChild(fromPaiir()); t.appendChild(el('b', '', p[1])); t.appendChild(el('p', '', p[2]));
     var go = el('span', 'go', p[3]); go.appendChild(icon('arrow')); t.appendChild(go); a.appendChild(t);
     return a;
   }
@@ -170,21 +218,19 @@
     if (i === 0) { var h = el('span', 'pc-hint'); h.appendChild(icon('up')); h.appendChild(document.createTextNode('Swipe up for the next story')); im.appendChild(h); }
     return c;
   }
-  function promoCard(i) {
-    var p = PROMOS[i % PROMOS.length], c = el('article', 'pc pc-paiir');
-    var w = el('div', 'pc-pin'), k = el('span', 'promo-k'); k.appendChild(el('i')); k.appendChild(document.createTextNode('From Paiir')); w.appendChild(ic(p[0])); w.appendChild(k);
-    w.appendChild(el('h2', 'pc-t', p[1])); w.appendChild(el('p', 'pc-s', p[2]));
-    var a = el('a', 'btn btn-pri', p[3]); a.href = HOME + p[4]; a.appendChild(icon('arrow')); w.appendChild(a);
-    w.appendChild(el('small', 'pc-note', 'Swipe up to keep reading'));
-    c.appendChild(w); return c;
+  // on phones, Paiir's own cards are shaped like a story: the picture on top, then the words and the button
+  function paiirCard(key, label, title, text, action) {
+    var c = el('article', 'pc pc-promo'); c.setAttribute('aria-label', title);
+    var im = el('div', 'pc-img'); im.appendChild(art(key)); c.appendChild(im);
+    var b = el('div', 'pc-b'); b.appendChild(fromPaiir(label)); b.appendChild(el('h2', 'pc-t', title)); b.appendChild(el('p', 'pc-s', text));
+    var f = el('div', 'pc-foot'); action.forEach(function (x) { f.appendChild(x); }); b.appendChild(f); c.appendChild(b);
+    return c;
   }
+  function goLink(label, href) { var a = el('a', 'pc-go', label); a.href = href; a.appendChild(icon('arrow')); return a; }
+  function goBtn(label, fn, cls) { var b = el('button', cls || 'pc-go', label); b.type = 'button'; b.addEventListener('click', fn); if (!cls) b.appendChild(icon('arrow')); return b; }
+  function promoCard(i) { var p = PROMOS[i % PROMOS.length]; return paiirCard(p[0], 'From Paiir', p[1], p[2], [goLink(p[3], HOME + p[4])]); }
   function topicsCard() {
-    var c = el('article', 'pc pc-paiir'), w = el('div', 'pc-pin');
-    w.appendChild(ic('sliders')); w.appendChild(el('h2', 'pc-t', 'Read what you care about.'));
-    w.appendChild(el('p', 'pc-s', 'Pick your topics, from AI and design to the economy and your health, and we’ll keep you updated every hour. Reading late? The moon button up top turns on Dim light, to rest your eyes.'));
-    var b = el('button', 'btn btn-pri', 'Choose my topics'); b.type = 'button'; b.addEventListener('click', openPicker); w.appendChild(b);
-    w.appendChild(el('small', 'pc-note', 'Or swipe up to keep reading'));
-    c.appendChild(w); return c;
+    return paiirCard('topics', 'Your topics', 'Read what you care about.', 'Pick your topics, from AI and design to the economy and your health, and we’ll keep you updated every hour. Reading late? The moon button up top turns on Dim light.', [goBtn('Choose my topics', openPicker)]);
   }
   // ---- advertise with us: an example of a sponsored story, and a short form that reaches the Paiir team ----
   function adSample() {
@@ -202,7 +248,7 @@
     var b = el('button', 'btn btn-pri', 'Advertise with us'); b.type = 'button'; b.appendChild(icon('arrow')); b.addEventListener('click', openAdvertise); c.appendChild(b);
     return c;
   }
-  function adCard() { var c = el('article', 'pc pc-paiir'), w = el('div', 'pc-pin'); w.appendChild(adBlock('ad-in')); w.appendChild(el('small', 'pc-note', 'Swipe up to keep reading')); c.appendChild(w); return c; }
+  function adCard() { return paiirCard('ad', 'For brands', 'Advertise on Paiir News', 'Reach readers who choose what they read: founders, builders and curious minds. Your story sits in the feed like the one above, clearly marked as sponsored.', [goBtn('Advertise with us', openAdvertise)]); }
   function field(label, input) { var l = el('label', 'af'); l.appendChild(el('span', 'af-l', label)); l.appendChild(input); return l; }
   function openAdvertise() {
     if (sheet) return;
@@ -249,12 +295,7 @@
     requestAnimationFrame(function () { sheet.classList.add('on'); name.focus(); });
   }
   function endCard() {
-    var c = el('article', 'pc pc-paiir'), w = el('div', 'pc-pin');
-    w.appendChild(ic('check')); w.appendChild(el('h2', 'pc-t', 'You’re all caught up.'));
-    w.appendChild(el('p', 'pc-s', 'That’s everything for now. We’ll have fresh stories for you within the hour, so take a break and rest your eyes. Meanwhile, see what else Paiir does: sell what you know, or find who you need.'));
-    var a = el('a', 'btn btn-pri', 'Explore paiir.in'); a.href = HOME; a.appendChild(icon('arrow')); w.appendChild(a);
-    var t = el('button', 'btn btn-sec', 'Back to the first story'); t.type = 'button'; t.addEventListener('click', function () { pager.scrollTo({ top: 0, behavior: 'smooth' }); }); w.appendChild(t);
-    c.appendChild(w); return c;
+    return paiirCard('end', 'All caught up', 'You’re all caught up.', 'We’ll have fresh stories for you within the hour, so take a break and rest your eyes. Meanwhile, see what else Paiir does.', [goLink('Explore paiir.in', HOME), goBtn('Back to the top', function () { pager.scrollTo({ top: 0, behavior: 'smooth' }); }, 'pc-back')]);
   }
   function renderCards() {
     pager.textContent = '';
