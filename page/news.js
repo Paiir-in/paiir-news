@@ -221,6 +221,7 @@
     var row = el('div', 'af-two'); row.appendChild(field('Your name', name)); row.appendChild(field('Work email', email)); f.appendChild(row);
     f.appendChild(field('Company or brand', co)); f.appendChild(field('What would you like to promote?', msg)); f.appendChild(hp);
     var err = el('p', 'af-err'); err.setAttribute('role', 'alert'); f.appendChild(err);
+    f.addEventListener('input', function () { err.textContent = ''; });
     var go = el('button', 'btn btn-pri', 'Send to the Paiir team'); go.type = 'submit'; f.appendChild(go);
     f.appendChild(el('small', 'af-note', 'Or write to ' + MAIL + '. We never share your details.'));
     box.appendChild(f); sheet.appendChild(box); document.body.appendChild(sheet);
