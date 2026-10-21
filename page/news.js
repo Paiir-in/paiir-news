@@ -178,8 +178,8 @@
   }
   function topicsCard() {
     var c = el('article', 'pc pc-paiir'), w = el('div', 'pc-pin');
-    w.appendChild(ic('sliders')); w.appendChild(el('h2', 'pc-t', 'Make it yours.'));
-    w.appendChild(el('p', 'pc-s', 'Pick the topics you care about, from AI and design to the economy and sex education. Your feed shows them first.'));
+    w.appendChild(ic('sliders')); w.appendChild(el('h2', 'pc-t', 'Read what you care about.'));
+    w.appendChild(el('p', 'pc-s', 'Pick your topics, from AI and design to the economy and your health, and we’ll keep you updated every hour. Reading late? The moon button up top turns on Dim light, to rest your eyes.'));
     var b = el('button', 'btn btn-pri', 'Choose my topics'); b.type = 'button'; b.addEventListener('click', openPicker); w.appendChild(b);
     w.appendChild(el('small', 'pc-note', 'Or swipe up to keep reading'));
     c.appendChild(w); return c;
@@ -187,7 +187,7 @@
   function endCard() {
     var c = el('article', 'pc pc-paiir'), w = el('div', 'pc-pin');
     w.appendChild(ic('check')); w.appendChild(el('h2', 'pc-t', 'You’re all caught up.'));
-    w.appendChild(el('p', 'pc-s', 'New stories arrive every hour. Meanwhile, see what else Paiir does: sell what you know, or find who you need.'));
+    w.appendChild(el('p', 'pc-s', 'That’s everything for now. We’ll have fresh stories for you within the hour, so take a break and rest your eyes. Meanwhile, see what else Paiir does: sell what you know, or find who you need.'));
     var a = el('a', 'btn btn-pri', 'Explore paiir.in'); a.href = HOME; a.appendChild(icon('arrow')); w.appendChild(a);
     var t = el('button', 'btn btn-sec', 'Back to the first story'); t.type = 'button'; t.addEventListener('click', function () { pager.scrollTo({ top: 0, behavior: 'smooth' }); }); w.appendChild(t);
     c.appendChild(w); return c;
@@ -239,7 +239,7 @@
     var box = el('div', 'sheet'); box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-labelledby', 'sheetH');
     var head = el('div', 'sheet-h'), h = el('h2', '', 'Pick your topics'); h.id = 'sheetH'; head.appendChild(h);
     var x = el('button', 'sheet-x'); x.type = 'button'; x.setAttribute('aria-label', 'Close'); x.appendChild(icon('x')); head.appendChild(x); box.appendChild(head);
-    box.appendChild(el('p', 'sheet-p', 'Your feed shows these first. They stay on this device, and you can change them any time.'));
+    box.appendChild(el('p', 'sheet-p', 'Choose what you love to read. We’ll keep you updated on these every hour. Your choice stays on this device, and you can change it any time.'));
     var g = el('div', 'tgrid');
     TOPICS.forEach(function (t) {
       var b = el('button', 'tpick'); b.type = 'button'; b.setAttribute('aria-pressed', chosen.indexOf(t[0]) > -1 ? 'true' : 'false');
@@ -297,9 +297,16 @@
 
   // ---- Dim light: a warmer, softer palette for tired eyes, remembered on this device ----
   (function () {
-    var b = $('dimBtn'), root = document.documentElement, set = function (on) { root.classList.toggle('dim', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = on ? '#14110D' : '#0E1014'; };
+    var b = $('dimBtn'), care = document.querySelector('[data-dim]'), note = document.querySelector('[data-dimnote]'), root = document.documentElement;
+    var set = function (on) {
+      root.classList.toggle('dim', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      if (care) { care.setAttribute('aria-pressed', on ? 'true' : 'false'); note.textContent = on ? 'Dim light is on. Rest easy' : 'Turn on Dim light'; }
+      var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = on ? '#14110D' : '#0E1014';
+    };
+    var flip = function () { var on = !root.classList.contains('dim'); set(on); try { localStorage.setItem('paiir-news-dim', on ? '1' : '0'); } catch (e) {} toast(on ? 'Dim light on. Easier on your eyes' : 'Dim light off'); };
     set(root.classList.contains('dim'));
-    b.addEventListener('click', function () { var on = !root.classList.contains('dim'); set(on); try { localStorage.setItem('paiir-news-dim', on ? '1' : '0'); } catch (e) {} toast(on ? 'Dim light on' : 'Dim light off'); });
+    b.addEventListener('click', flip); if (care) care.addEventListener('click', flip);
+    var tp = document.querySelector('[data-topics]'); if (tp) tp.addEventListener('click', openPicker);
   })();
 
   // ---- sharing: a Paiir link. Its preview shows the story's picture; it opens the story on Paiir News first ----

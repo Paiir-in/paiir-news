@@ -63,7 +63,20 @@ button { font: inherit; color: inherit; }
 .live i { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: live 2.4s ease-out infinite; }
 .top-h { margin: 0; font-size: clamp(38px, 5.6vw, 68px); font-weight: 700; line-height: 1.02; letter-spacing: -.03em; }
 .top-h .hl { color: var(--accent); }
-.top-p { max-width: 36em; margin: 0; font-size: clamp(16px, 1.4vw, 19px); color: var(--soft); }
+.top-p { max-width: 40em; margin: 0; font-size: clamp(16px, 1.4vw, 19px); line-height: 1.65; color: var(--soft); }
+.top-h { max-width: 18ch; }
+/* three small promises under the line: your topics, updated every hour, kind to your eyes */
+.care { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; max-width: 860px; margin-top: 8px; }
+.care-b { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 14px 16px 14px 14px; border: 0; border-radius: 22px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); text-align: left; color: var(--text); font: inherit; cursor: pointer; transition: box-shadow .2s ease, background-color .2s ease; }
+button.care-b:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.care-s { cursor: default; }
+.care-i { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 13px; background: var(--surface2); color: var(--accent); }
+.care-i svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.care-b b { display: block; font-size: 15.5px; font-weight: 600; line-height: 1.3; }
+.care-b small { display: block; font-size: 13.5px; line-height: 1.4; color: var(--soft); }
+.care-b[data-dim][aria-pressed="true"] { box-shadow: inset 0 0 0 1px rgba(233, 174, 102, .45); }
+.care-b[data-dim][aria-pressed="true"] .care-i { background: rgba(233, 174, 102, .16); color: #E9AE66; }
+@media (max-width: 860px) { .care { grid-template-columns: minmax(0, 1fr); } }
 
 /* topics, sticky under the header */
 .chips-bar { position: sticky; top: var(--hdr); z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
