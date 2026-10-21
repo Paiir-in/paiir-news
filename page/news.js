@@ -38,7 +38,9 @@
     pin: '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>'
   };
   var TOPICS = [['AI', 'cpu'], ['Startups', 'rocket'], ['Economy', 'trend'], ['Design', 'palette'], ['Gadgets', 'phone'], ['Apps', 'grid'], ['Security', 'shield'], ['Science', 'flask'], ['Health', 'pulse'], ['Sex education', 'heart'], ['India', 'pin']];
-  var STEP = 20, NEWS = '{{BASE}}/', HOME = '{{HOME}}', KEY = 'paiir-news-topics';
+  ICONS.megaphone = '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>';
+  ICONS.image = '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>';
+  var STEP = 20, NEWS = '{{BASE}}/', HOME = '{{HOME}}', KEY = 'paiir-news-topics', MAIL = 'contact@paiir.in';
   // what Paiir does, between the stories (in turn)
   var PROMOS = [
     ['link', 'Know something people keep asking you about?', 'Sell it from one link: 1:1 calls, courses, templates and paid questions. Free to start, and you keep 93% of every sale.', 'Start selling on Paiir', '#products'],
@@ -184,6 +186,67 @@
     w.appendChild(el('small', 'pc-note', 'Or swipe up to keep reading'));
     c.appendChild(w); return c;
   }
+  // ---- advertise with us: an example of a sponsored story, and a short form that reaches the Paiir team ----
+  function adSample() {
+    var w = el('div', 'ad-sample'); w.setAttribute('aria-hidden', 'true');
+    var t = el('div', 'ad-sb'), src = el('div', 'src'), logo = el('span', 'fav ad-logo', 'B'); src.appendChild(logo); src.appendChild(el('b', '', 'Your brand')); src.appendChild(el('span', 'ad-tag', 'Sponsored'));
+    t.appendChild(src); t.appendChild(el('b', 'ad-st', 'Your story, told in your words')); t.appendChild(el('span', 'ad-go', 'Learn more'));
+    var im = el('div', 'ad-img'); im.appendChild(icon('image')); w.appendChild(t); w.appendChild(im);
+    return w;
+  }
+  function adBlock(cls) {
+    var c = el('div', cls), k = el('span', 'promo-k'); k.appendChild(el('i')); k.appendChild(document.createTextNode('For brands')); c.appendChild(k);
+    c.appendChild(el('b', 'ad-h', 'Advertise on Paiir News'));
+    c.appendChild(el('p', 'ad-p', 'Reach readers who choose what they read: founders, builders and curious minds. Your story sits in the feed like this, clearly marked as sponsored.'));
+    var lab = el('span', 'ad-lab', 'Example placement'); c.appendChild(lab); c.appendChild(adSample());
+    var b = el('button', 'btn btn-pri', 'Advertise with us'); b.type = 'button'; b.appendChild(icon('arrow')); b.addEventListener('click', openAdvertise); c.appendChild(b);
+    return c;
+  }
+  function adCard() { var c = el('article', 'pc pc-paiir'), w = el('div', 'pc-pin'); w.appendChild(adBlock('ad-in')); w.appendChild(el('small', 'pc-note', 'Swipe up to keep reading')); c.appendChild(w); return c; }
+  function field(label, input) { var l = el('label', 'af'); l.appendChild(el('span', 'af-l', label)); l.appendChild(input); return l; }
+  function openAdvertise() {
+    if (sheet) return;
+    var back = document.activeElement;
+    sheet = el('div', 'sheet-wrap');
+    var box = el('div', 'sheet'); box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-labelledby', 'adH');
+    var head = el('div', 'sheet-h'), h = el('h2', '', 'Advertise on Paiir News'); h.id = 'adH'; head.appendChild(h);
+    var x = el('button', 'sheet-x'); x.type = 'button'; x.setAttribute('aria-label', 'Close'); x.appendChild(icon('x')); head.appendChild(x); box.appendChild(head);
+    box.appendChild(el('p', 'sheet-p', 'Tell us a little about what you’d like to promote. The Paiir team replies within 2 working days with the options that fit.'));
+    var f = el('form', 'af-form'); f.noValidate = true;
+    var name = el('input'); name.name = 'name'; name.autocomplete = 'name'; name.maxLength = 120; name.placeholder = 'Your name';
+    var email = el('input'); email.name = 'email'; email.type = 'email'; email.autocomplete = 'email'; email.required = true; email.placeholder = 'you@company.com';
+    var co = el('input'); co.name = 'company'; co.autocomplete = 'organization'; co.maxLength = 120; co.placeholder = 'Company or brand';
+    var msg = el('textarea'); msg.name = 'message'; msg.rows = 3; msg.maxLength = 1000; msg.placeholder = 'A product, an event, a hiring drive…';
+    var hp = el('input'); hp.name = 'website'; hp.tabIndex = -1; hp.autocomplete = 'off'; hp.className = 'af-hp'; hp.setAttribute('aria-hidden', 'true');
+    var row = el('div', 'af-two'); row.appendChild(field('Your name', name)); row.appendChild(field('Work email', email)); f.appendChild(row);
+    f.appendChild(field('Company or brand', co)); f.appendChild(field('What would you like to promote?', msg)); f.appendChild(hp);
+    var err = el('p', 'af-err'); err.setAttribute('role', 'alert'); f.appendChild(err);
+    var go = el('button', 'btn btn-pri', 'Send to the Paiir team'); go.type = 'submit'; f.appendChild(go);
+    f.appendChild(el('small', 'af-note', 'Or write to ' + MAIL + '. We never share your details.'));
+    box.appendChild(f); sheet.appendChild(box); document.body.appendChild(sheet);
+    var close = function () { if (!sheet) return; sheet.remove(); sheet = null; document.removeEventListener('keydown', key, true); if (back && back.focus) back.focus(); };
+    var key = function (e) { if (e.key === 'Escape') { e.preventDefault(); close(); } else if (e.key === 'Tab') { var q = box.querySelectorAll('button, input:not(.af-hp), textarea'), a = q[0], z = q[q.length - 1]; if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); } else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); } } };
+    document.addEventListener('keydown', key, true);
+    sheet.addEventListener('click', function (e) { if (e.target === sheet) close(); });
+    x.addEventListener('click', close);
+    f.addEventListener('submit', function (e) {
+      e.preventDefault(); err.textContent = '';
+      var em = email.value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { err.textContent = 'Please add an email we can reply to.'; email.focus(); return; }
+      go.disabled = true; go.textContent = 'Sending…';
+      fetch('/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'news-advertise', email: em, name: name.value.trim(), detail: co.value.trim(), data: { company: co.value.trim(), message: msg.value.trim(), from: 'Paiir News' }, page: location.pathname, website: hp.value }) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok || !j.ok) throw new Error('send'); }); })
+        .then(function () {
+          box.textContent = '';
+          var d = el('div', 'af-done'), i = ic('check'); d.appendChild(i); d.appendChild(el('h2', '', 'Thank you. We’ve got it.'));
+          d.appendChild(el('p', 'sheet-p', 'The Paiir team will write to ' + em + ' within 2 working days.'));
+          var ok = el('button', 'btn btn-sec', 'Back to the news'); ok.type = 'button'; ok.addEventListener('click', close); d.appendChild(ok);
+          box.appendChild(d); ok.focus();
+        })
+        .catch(function () { go.disabled = false; go.textContent = 'Send to the Paiir team'; err.textContent = 'We couldn’t send this just now. Please try again, or write to ' + MAIL + '.'; });
+    });
+    requestAnimationFrame(function () { sheet.classList.add('on'); name.focus(); });
+  }
   function endCard() {
     var c = el('article', 'pc pc-paiir'), w = el('div', 'pc-pin');
     w.appendChild(ic('check')); w.appendChild(el('h2', 'pc-t', 'You’re all caught up.'));
@@ -200,6 +263,7 @@
       pager.appendChild(card(s, i)); n++;
       if (n === 2 && !S.picks.length) pager.appendChild(topicsCard());
       if (n === 6 || (n > 6 && (n - 6) % 8 === 0)) pager.appendChild(promoCard(p++));
+      if (n === 14) pager.appendChild(adCard());
     });
     pager.appendChild(endCard());
     pager.scrollTop = 0;
@@ -273,6 +337,7 @@
     });
     c.appendChild(ul);
     var go = el('a', 'btn btn-pri', 'Visit paiir.in'); go.href = HOME; c.appendChild(go); box.appendChild(c);
+    box.appendChild(adBlock('card ad-card'));
     var src = (S.data && S.data.sources) || [];
     if (src.length) {
       var d = el('div', 'card'); d.appendChild(el('p', 'card-h', 'From ' + src.length + ' trusted sources'));
@@ -307,6 +372,7 @@
     set(root.classList.contains('dim'));
     b.addEventListener('click', flip); if (care) care.addEventListener('click', flip);
     var tp = document.querySelector('[data-topics]'); if (tp) tp.addEventListener('click', openPicker);
+    var ad = document.querySelector('[data-advertise]'); if (ad) ad.addEventListener('click', openAdvertise);
   })();
 
   // ---- sharing: a Paiir link. Its preview shows the story's picture; it opens the story on Paiir News first ----
