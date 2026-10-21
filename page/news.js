@@ -105,7 +105,7 @@
     var b = el('button', cls || 'share'); b.type = 'button'; b.setAttribute('aria-label', 'Share: ' + s.title); b.setAttribute('aria-haspopup', 'menu'); b.setAttribute('aria-expanded', 'false'); b.appendChild(icon('share'));
     b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); share(s, b); }); return b;
   }
-  function out(a, s) { a.href = NEWS + 's/' + encodeURIComponent(s.id); }
+  function out(a, s) { a.href = '{{PATH}}s/' + encodeURIComponent(s.id); }
 
   // which stories: a topic chip, all of them, or "For you" (the reader's own topics). A shared story comes first.
   function inTopic(s, t) { return s.category === t || (s.tags || []).indexOf(t) > -1; }

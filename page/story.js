@@ -3,7 +3,8 @@
 // the feeds is untrusted: it goes in with textContent, and only http/https links and images are used.
 (function () {
   'use strict';
-  var NEWS = '{{BASE}}/', ST = window.PAIIR_STORY || {}, NS = 'http://www.w3.org/2000/svg';
+  // links and data on this site's own address (paiir.in and www.paiir.in both work; a fetch across them would be blocked)
+  var PATH = '{{PATH}}', ST = window.PAIIR_STORY || {}, NS = 'http://www.w3.org/2000/svg';
   var $ = function (id) { return document.getElementById(id); };
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function safe(u) { try { var x = new URL(u); return x.protocol === 'https:' || x.protocol === 'http:' ? x.href : ''; } catch (e) { return ''; } }
@@ -47,7 +48,7 @@
   // more stories: the same topic first, then the newest
   var list = $('spMore');
   function item(s) {
-    var a = el('a', 'sp-it'); a.href = NEWS + 's/' + encodeURIComponent(s.id);
+    var a = el('a', 'sp-it'); a.href = PATH + 's/' + encodeURIComponent(s.id);
     var im = el('div', 'sp-it-img'), u = safe(s.image);
     if (u) { var img = el('img'); img.alt = ''; img.loading = 'lazy'; img.decoding = 'async'; img.referrerPolicy = 'no-referrer'; img.src = u; img.addEventListener('error', function () { img.replaceWith(letter(s.source)); }); im.appendChild(img); } else im.appendChild(letter(s.source));
     a.appendChild(im);
@@ -57,7 +58,7 @@
     a.appendChild(src); a.appendChild(el('h3', 'sp-it-t', s.title));
     return a;
   }
-  if (list) fetch(NEWS + 'news.json', { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (d) {
+  if (list) fetch(PATH + 'news.json', { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (d) {
     var all = (d && d.stories || []).filter(function (s) { return s.id !== ST.id && s.title; });
     var near = function (s) { return ST.category && (s.category === ST.category || (s.tags || []).indexOf(ST.category) > -1); };
     // only the same topic under "More in <topic>" (6, or 3 to keep the rows even); too few, and it is the latest instead
