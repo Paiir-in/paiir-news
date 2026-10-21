@@ -2,7 +2,7 @@
 //   npm run news      builds _site for paiir.in/news (what the hourly GitHub Action runs)
 //   npm run dev       the same build on this computer, served at localhost:5600 (dev.mjs)
 //   npm run site      the same build inside the main site's preview at localhost:5500/news/ (site.mjs)
-// Writes <out>/news.json, one small share page per story at <out>/s/<id>.html (kept 30 days) and the page files
+// Writes <out>/news.json, one story page per story at <out>/s/<id>.html (kept 30 days) and the page files
 // from ./page. If one feed fails the others still update (its stories from the last run are kept for a day); if every
 // feed fails, the last good news.json is kept. Costs nothing: public feeds only, no keys.
 // Settings (environment): NEWS_OUT (folder), NEWS_BASE (public address of the news page), NEWS_HOME (paiir.in, for the
@@ -10,7 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SOURCES, parseFeed, cleanUrl, idOf, titleKey, categorise, ogImage, sharePage, safeUrl, cleanDomain } from './lib.mjs';
+import { SOURCES, parseFeed, cleanUrl, idOf, titleKey, categorise, ogImage, storyPage, safeUrl, cleanDomain } from './lib.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const UA = 'Mozilla/5.0 (compatible; PaiirNews/1.0; +https://paiir.in/news/)';
@@ -42,8 +42,9 @@ export function publishPage(out, base, home) {
   };
   copy(path.join(HERE, 'page'), out);
 }
-// share pages for every story seen in the last 30 days (kept in .cache, so a fresh build on GitHub still has them)
-function writeShares(out, cache, base, now, latest) {
+// a story page for every story seen in the last 30 days (kept in .cache, so a fresh build on GitHub still has them);
+// it is also what a shared link opens
+function writeShares(out, cache, base, now, latest, home) {
   const raw = readJSON(path.join(cache, 'shares.json'), {}), arc = {};
   Object.keys(raw).forEach(k => { const v = raw[k]; arc[k] = typeof v === 'number' ? { first: v } : v; });
   (latest || []).forEach(s => { arc[s.id] = { first: (arc[s.id] && arc[s.id].first) || now, story: s }; });
@@ -51,7 +52,7 @@ function writeShares(out, cache, base, now, latest) {
   Object.keys(arc).forEach(k => { if (now - arc[k].first > SHARE_DAYS * DAY && !live.has(k)) delete arc[k]; });
   const ogDefault = base + '/brand/og-default.png', sdir = path.join(out, 's');
   // s/<id>.html, served at /s/<id> (GitHub Pages and both local previews drop the .html)
-  Object.keys(arc).forEach(k => { if (arc[k].story) writeAtomic(path.join(sdir, k + '.html'), sharePage(arc[k].story, base, ogDefault)); });
+  Object.keys(arc).forEach(k => { if (arc[k].story) writeAtomic(path.join(sdir, k + '.html'), storyPage(arc[k].story, base, home, ogDefault)); });
   if (fs.existsSync(sdir)) for (const d of fs.readdirSync(sdir)) {
     const m = /^([a-f0-9]{10})(\.html)?$/.exec(d);
     if (m && (!m[2] || !arc[m[1]])) fs.rmSync(path.join(sdir, d), { recursive: true, force: true });
@@ -81,7 +82,7 @@ export async function run(o = {}) {
   if (!report.some(r => r.ok)) {
     // keep the last good stories: on a fresh build they come back from the cache
     if (!fs.existsSync(path.join(out, 'news.json')) && prev) writeAtomic(path.join(out, 'news.json'), JSON.stringify(prev));
-    writeShares(out, cache, base, now, prev && prev.stories);
+    writeShares(out, cache, base, now, prev && prev.stories, home);
     log('Every feed failed. Keeping the last good news.json.');
     return { ok: false, report };
   }
@@ -105,7 +106,7 @@ export async function run(o = {}) {
   if (!latest.length) {
     // feeds answered but every story was too old: keep the last good ones rather than publish an empty page
     if (!fs.existsSync(path.join(out, 'news.json')) && prev) writeAtomic(path.join(out, 'news.json'), JSON.stringify(prev));
-    writeShares(out, cache, base, now, prev && prev.stories);
+    writeShares(out, cache, base, now, prev && prev.stories, home);
     log('No new stories. Keeping the last good news.json.');
     return { ok: false, report };
   }
@@ -129,9 +130,9 @@ export async function run(o = {}) {
   writeAtomic(path.join(out, 'news.json'), JSON.stringify(data));
   writeAtomic(path.join(cache, 'last-news.json'), JSON.stringify(data));
 
-  // 5. a share page for every story of the last 30 days
-  const shares = writeShares(out, cache, base, now, latest);
-  log('Wrote ' + latest.length + ' stories (' + latest.filter(s => s.image).length + ' with images) from ' + report.filter(r => r.ok).length + ' of ' + report.length + ' sources, and ' + shares + ' share pages.');
+  // 5. a story page for every story of the last 30 days
+  const shares = writeShares(out, cache, base, now, latest, home);
+  log('Wrote ' + latest.length + ' stories (' + latest.filter(s => s.image).length + ' with images) from ' + report.filter(r => r.ok).length + ' of ' + report.length + ' sources, and ' + shares + ' story pages.');
   return { ok: true, report, stories: latest };
 }
 

@@ -4,4 +4,4 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { run } from './fetch-news.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-await run({ out: path.join(HERE, '../paiir-site/news'), base: 'http://localhost:5500/news', home: '../' });
+await run({ out: path.join(HERE, '../paiir-site/news'), base: 'http://localhost:5500/news', home: 'http://localhost:5500/' });

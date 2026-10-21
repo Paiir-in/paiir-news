@@ -153,17 +153,60 @@ export function categorise(title, snip, src) {
 }
 
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-// the tiny page behind a share link: preview tags for WhatsApp, LinkedIn and X, then on to the story on the Paiir News
-// screen (owner: the story shows on Paiir; "Read more" there opens the publisher)
-export function sharePage(st, base, ogDefault) {
-  const root = base.replace(/\/+$/, ''), url = root + '/s/' + st.id, pic = safeUrl(st.image), back = root + '/?s=' + encodeURIComponent(st.id);
+// Each story's own page on Paiir News (owner, 2026-10-21: "we should have our own news page instead of redirecting to the
+// source"). Readers stay on Paiir: the picture, the headline, the source and time, our short summary, a sponsored slot,
+// related stories and share. The full article stays with its publisher ("Read the full story at <source>"): copying
+// publishers' full text and photos would need their permission. The same page carries the preview tags for WhatsApp,
+// LinkedIn and X. story.js adds the related stories (from news.json), Dim light, share and "2h ago".
+const SP_TIME = { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' };
+export function storyPage(st, base, home, ogDefault) {
+  const root = base.replace(/\/+$/, ''), url = root + '/s/' + st.id, pic = sharper(safeUrl(st.image)), link = safeUrl(st.link);
   const img = pic ? 'https://wsrv.nl/?url=' + encodeURIComponent(pic) + '&w=1200&h=630&fit=cover&a=attention&output=jpg&q=65' : ogDefault;
-  const desc = st.snippet || ('From ' + st.source + ' on Paiir News.');
-  return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n' +
+  const desc = st.snippet || ('From ' + st.source + ' on Paiir News.'), when = Date.parse(st.published);
+  const date = isFinite(when) ? new Date(when).toLocaleString('en-IN', SP_TIME).replace(/\b(am|pm)\b/i, m => m.toLowerCase()) : '';
+  const cat = st.category && st.category !== 'Tech' ? st.category : '';
+  const tags = [...new Set([cat].concat(st.tags || []).filter(t => t && t !== 'Tech'))];
+  const d = String(st.domain || '').toLowerCase().replace(/[^a-z0-9.-]/g, '');
+  const fav = d ? '<img class="fav" src="https://www.google.com/s2/favicons?domain=' + encodeURIComponent(d) + '&amp;sz=64" alt="" width="20" height="20" referrerpolicy="no-referrer">' : '<span class="ph fav" aria-hidden="true">' + esc((String(st.source || 'P').trim()[0] || 'P').toUpperCase()) + '</span>';
+  const ext = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>';
+  const shareIc = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>';
+  const arrow = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>';
+  const back = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>';
+  const data = JSON.stringify({ id: st.id, category: cat, tags, title: st.title, published: st.published || '' }).replace(/</g, '\\u003c');
+  return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n' +
     '<title>' + esc(st.title) + ' · Paiir News</title>\n<meta name="description" content="' + esc(desc) + '">\n<meta name="robots" content="noindex">\n' +
+    '<meta name="theme-color" content="#0E1014"><meta name="color-scheme" content="dark">\n' +
     '<meta property="og:type" content="article"><meta property="og:site_name" content="Paiir News">\n<meta property="og:title" content="' + esc(st.title) + '">\n<meta property="og:description" content="' + esc(desc) + '">\n' +
     '<meta property="og:image" content="' + esc(img) + '">\n<meta property="og:image:type" content="' + (pic ? 'image/jpeg' : 'image/png') + '"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">\n<meta property="og:url" content="' + esc(url) + '">\n<meta name="twitter:card" content="summary_large_image">\n<meta name="twitter:title" content="' + esc(st.title) + '">\n<meta name="twitter:image" content="' + esc(img) + '">\n' +
     '<link rel="canonical" href="' + esc(url) + '"><link rel="icon" href="' + esc(root + '/brand/paiir-mark.svg') + '" type="image/svg+xml">\n' +
-    '<style>body{margin:0;display:grid;place-items:center;min-height:100vh;font:16px/1.5 Figtree,system-ui,sans-serif;color:#111318;background:#FFFFFF}a{color:#0A6CFF}</style></head>\n' +
-    '<body><p><a href="' + esc(back) + '">' + esc(st.title) + ' · Read it on Paiir News</a></p>\n<script>location.replace(' + JSON.stringify(back).replace(/</g, '\\u003c') + ');</script></body></html>\n';
+    '<script>try { if (localStorage.getItem(\'paiir-news-dim\') === \'1\') document.documentElement.classList.add(\'dim\'); } catch (e) {}</script>\n' +
+    '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
+    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400..800;1,400..800&amp;display=swap">\n' +
+    '<link rel="stylesheet" href="' + esc(root + '/news.css') + '">\n</head>\n<body class="sp-page">\n' +
+    '<a class="skip" href="#story">Skip to the story</a>\n' +
+    '<header class="nh"><div class="nw nh-in"><a class="nh-logo" href="' + esc(home) + '" aria-label="Paiir home"><img src="' + esc(root + '/brand/paiir-logo-on-dark.svg') + '" alt="Paiir" width="84" height="40"></a>' +
+    '<a class="nh-tag" href="' + esc(root + '/') + '"><i aria-hidden="true"></i>News</a><div class="nh-right">' +
+    '<button type="button" class="dim-btn" id="dimBtn" aria-pressed="false" title="A warmer, softer light for reading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg><span>Dim light</span></button>' +
+    '<a class="nh-home" href="' + esc(home) + '" aria-label="Paiir home"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\"/><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg><span>Home</span></a></div></div></header>\n' +
+    '<main class="nw sp" id="story">\n<a class="sp-back" href="' + esc(root + '/') + '">' + back + 'All news</a>\n<div class="sp-g">\n<article class="sp-art">\n' +
+    '<div class="src">' + fav + '<b>' + esc(st.source) + '</b>' + (date ? '<span>·</span><time datetime="' + esc(st.published) + '">' + esc(date) + '</time>' : '') + (cat ? '<span class="cat-sep">·</span><a class="cat" href="' + esc(root + '/?t=' + encodeURIComponent(cat)) + '">' + esc(cat) + '</a>' : '') + '</div>\n' +
+    '<h1 class="sp-t">' + esc(st.title) + '</h1>\n' +
+    (pic ? '<figure class="sp-fig"><img src="' + esc(pic) + '" alt="" referrerpolicy="no-referrer" decoding="async"><figcaption>Picture: ' + esc(st.source) + '</figcaption></figure>\n' : '') +
+    '<p class="sp-sum">' + esc(st.summary || st.snippet || '') + '</p>\n' +
+    '<div class="sp-acts">' + (link ? '<a class="btn btn-pri sp-read" href="' + esc(link) + '" target="_blank" rel="noopener noreferrer">Read the full story at ' + esc(st.source) + ext + '</a>' : '') +
+    '<button type="button" class="btn btn-sec sp-share" data-share>' + shareIc + 'Share</button></div>\n' +
+    '<p class="sp-note">A short summary by Paiir News. The full story and its pictures belong to ' + esc(st.source) + '.</p>\n' +
+    (tags.length ? '<div class="sp-tags">' + tags.map(t => '<a href="' + esc(root + '/?t=' + encodeURIComponent(t)) + '">' + esc(t) + '</a>').join('') + '</div>\n' : '') +
+    '</article>\n<aside class="sp-side" aria-label="Sponsored">\n<div class="sp-ad"><div class="sp-ad-k"><span>Sponsored</span><span class="sp-ex">Example</span></div>' +
+    '<div class="sp-ad-c"><div class="sp-ad-top"><span class="sp-ad-logo" aria-hidden="true">YB</span><span><b>Your brand</b><small>Your offer for Paiir readers</small></span></div>' +
+    '<div class="sp-ad-hero"><small>For readers of Paiir News</small><b>Your offer here</b><span>right beside every story</span></div>' +
+    '<a class="sp-ad-cta" href="' + esc(root + '/?advertise=1') + '">Advertise with us' + arrow + '</a></div>' +
+    '<p class="sp-ad-note">This could be your brand. Always marked as sponsored.</p></div>\n</aside>\n</div>\n' +
+    '<section class="sp-more" aria-labelledby="spMoreH"><h2 id="spMoreH">' + (cat ? 'More in ' + esc(cat) : 'More on Paiir News') + '</h2><div class="sp-list" id="spMore"></div>' +
+    '<a class="btn btn-sec sp-all" href="' + esc(root + '/') + '">See all the news' + arrow + '</a></section>\n</main>\n' +
+    '<footer class="sp-foot"><div class="nw"><span>Paiir News · News you care about, every hour</span><a href="' + esc(home) + '">paiir.in</a></div></footer>\n' +
+    '<div class="toast" id="toast" role="status" aria-live="polite"></div>\n' +
+    '<script>window.PAIIR_STORY = ' + data + ';</script>\n<script src="' + esc(root + '/story.js') + '" defer></script>\n</body></html>\n';
 }
+// the old name, for anything that still calls it
+export const sharePage = (st, base, ogDefault, home) => storyPage(st, base, home || 'https://paiir.in/', ogDefault);

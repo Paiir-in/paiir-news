@@ -1,9 +1,10 @@
 // Paiir News: the page. Reads news.json (written every hour by fetch-news.mjs).
 // Phones (owner: "like the Inshorts app"): one story per screen, swipe up for the next; each card has the picture, a
-// short summary, "Read more at <source>" (opens the publisher) and share. Computers: the top story, then the latest as
+// short summary, "Read the story" and share. Computers: the top story, then the latest as
 // an easy-to-read list, with a side panel about Paiir. Both: "From Paiir" cards between stories, topic chips, readers'
-// own topics ("For you", saved on their device), Dim light, and sharing. A shared link is a Paiir link
-// (/news/s/<id>): its preview shows the story's picture, and it opens the story first on Paiir News. Everything from
+// own topics ("For you", saved on their device), Dim light, and sharing. Every story opens its own Paiir page
+// (/news/s/<id>, owner: "our own news page instead of redirecting to the source"), which links on to the publisher for
+// the full story; that page is also the shared link, so its preview shows the story's picture. Everything from
 // the feeds is untrusted: it goes in with textContent, and only http/https links and images are used.
 (function () {
   'use strict';
@@ -64,7 +65,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var feed = $('feed'), more = $('more'), moreBtn = $('moreBtn'), chips = $('chips'), updated = $('updated'), toastEl = $('toast'), pager = $('pager');
   var phone = window.matchMedia ? matchMedia('(max-width: 720px)') : { matches: false };
-  var shared = new URLSearchParams(location.search).get('s');
+  var ask = new URLSearchParams(location.search), shared = ask.get('s');
   var S = { data: null, cat: 'All', n: STEP, list: [], rows: 0, promos: 0, picks: load() };
 
   function load() { try { var v = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(v) ? v.filter(function (t) { return TOPICS.some(function (x) { return x[0] === t; }); }) : []; } catch (e) { return []; } }
@@ -104,7 +105,7 @@
     var b = el('button', cls || 'share'); b.type = 'button'; b.setAttribute('aria-label', 'Share: ' + s.title); b.setAttribute('aria-haspopup', 'menu'); b.setAttribute('aria-expanded', 'false'); b.appendChild(icon('share'));
     b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); share(s, b); }); return b;
   }
-  function out(a, s) { a.href = safe(s.link) || '#'; a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+  function out(a, s) { a.href = NEWS + 's/' + encodeURIComponent(s.id); }
 
   // which stories: a topic chip, all of them, or "For you" (the reader's own topics). A shared story comes first.
   function inTopic(s, t) { return s.category === t || (s.tags || []).indexOf(t) > -1; }
@@ -213,7 +214,7 @@
     var b = el('div', 'pc-b'); b.appendChild(srcRow(s)); b.appendChild(el('h2', 'pc-t', s.title));
     b.appendChild(el('p', 'pc-s', s.summary || s.snippet || ''));
     var f = el('div', 'pc-foot'), rm = el('a', 'pc-more'); out(rm, s);
-    rm.appendChild(el('span', '', 'Read more at ' + s.source)); rm.appendChild(icon('ext')); f.appendChild(rm);
+    rm.appendChild(el('span', '', 'Read the story')); rm.appendChild(icon('arrow')); f.appendChild(rm);
     f.appendChild(shareBtn(s, 'pc-share')); b.appendChild(f); c.appendChild(b);
     if (i === 0) { var h = el('span', 'pc-hint'); h.appendChild(icon('up')); h.appendChild(document.createTextNode('Swipe up for the next story')); im.appendChild(h); }
     return c;
@@ -458,6 +459,8 @@
 
   // ---- load ----
   if (S.picks.length) S.cat = 'For you';
+  // a topic link from a story page (?t=AI) opens that topic
+  var askT = ask.get('t'); if (askT && TOPICS.some(function (x) { return x[0] === askT; })) S.cat = askT;
   drawChips();
   $('today').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
   function tick() { if (S.data) updated.textContent = 'Updated ' + ago(S.data.updated); }
@@ -488,4 +491,6 @@
   }
   setInterval(tick, 60000);
   fetchNews();
+  // "Advertise with us" on a story page comes here with ?advertise=1
+  if (ask.get('advertise')) openAdvertise();
 })();

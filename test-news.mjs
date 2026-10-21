@@ -1,7 +1,7 @@
 // Paiir News: tests for the feed script, with sample feeds in each format and no network. npm test
 // RSS with content:encoded and CDATA, Atom with escaped HTML, RSS with media:thumbnail, a Hacker News style feed, a feed
 // that is missing (404) and one that is broken (not XML). The others must still update; when every feed fails the old
-// news.json stays; unsafe links and images are dropped; share pages carry escaped preview tags and expire after 30 days.
+// news.json stays; unsafe links and images are dropped; story pages carry the story, escaped preview tags, and expire after 30 days.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -90,20 +90,27 @@ t('every story has a summary for the phone cards, at least as long as its snippe
   assert.equal(news.stories.find(s => s.title.startsWith('New iPhone')).summary, 'We tried the new phone. It is fast.');
 });
 t('Hacker News link text is not used as a snippet', () => assert.equal(news.stories.find(s => s.source === 'Hacker News').snippet, ''));
-t('share pages exist with escaped preview tags', () => {
+t('story pages exist with the story and escaped preview tags', () => {
   const s = news.stories.find(x => x.title.startsWith('OpenAI')), html = fs.readFileSync(path.join(OUT, 's', s.id + '.html'), 'utf8');
   assert.match(html, /<meta property="og:title" content="OpenAI raises \$10B &amp; more – India push">/);
   assert.ok(html.includes('og:image" content="https://wsrv.nl/?url=https%3A%2F%2Fa.example%2Fone.jpg&amp;w=1200&amp;h=630&amp;fit=cover&amp;a=attention&amp;output=jpg&amp;q=65"'), 'a small JPEG preview WhatsApp can show');
   assert.ok(html.includes('og:image:width" content="1200"'));
   assert.match(html, /<meta property="og:site_name" content="Paiir News">/);
   assert.match(html, /twitter:card" content="summary_large_image"/);
-  assert.ok(html.includes('location.replace("https://paiir.in/news/?s=' + s.id + '")'), 'the share page opens the story on Paiir News');
+  assert.ok(!html.includes('location.replace('), 'the story page is a page, not a redirect');
+  assert.match(html, /<h1 class="sp-t">OpenAI raises \$10B &amp; more – India push<\/h1>/);
+  assert.ok(html.includes('href="' + s.link + '" target="_blank" rel="noopener noreferrer">Read the full story at ' + s.source), 'it links on to the publisher');
+  assert.ok(html.includes('<script src="https://paiir.in/news/story.js" defer></script>'), 'story.js adds more stories, Dim light and share');
+  assert.ok(html.includes('class="sp-ad"') && html.includes('Sponsored'), 'a clearly marked sponsored slot');
+  assert.ok(html.includes('class="nh-home"'), 'a Home button in the header');
   const noimg = news.stories.find(x => x.title.startsWith('Data image'));
   assert.match(fs.readFileSync(path.join(OUT, 's', noimg.id + '.html'), 'utf8'), /og:image" content="https:\/\/paiir\.in\/news\/brand\/og-default\.png"/);
 });
-t('share page escapes hostile text', () => {
+t('story page escapes hostile text, in the page and in its data', () => {
   const h = sharePage({ id: 'abcdef0123', title: '"><script>x</script>', snippet: '', source: 'S', image: 'javascript:alert(1)' }, 'https://paiir.in/news', 'https://paiir.in/news/brand/og-default.png');
   assert.ok(!h.includes('<script>x</script>')); assert.ok(h.includes('og:image" content="https://paiir.in/news/brand/og-default.png"'));
+  assert.ok(!/<\/script>x/.test(h) && h.includes('\\u003cscript>x\\u003c/script>'), 'the title inside the page data cannot close the script');
+  assert.ok(!h.includes('javascript:'), 'no unsafe picture');
 });
 const before = fs.readFileSync(path.join(OUT, 'news.json'), 'utf8');
 const r2 = await run({ fetch: fakeFetch(true), out: OUT, cache: CACHE, base: 'https://paiir.in/news', sources: SOURCES, log: quiet, now: NOW + 36e5, skipPage: true });

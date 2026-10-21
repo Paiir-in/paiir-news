@@ -454,3 +454,65 @@ button.care-b:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accen
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* ---- a clear way back to Paiir's home (owner, 2026-10-21), beside Dim light; on phones just the house ---- */
+.nh-home { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 15px 0 12px; border-radius: 999px; background: var(--surface2); box-shadow: inset 0 0 0 1px var(--line); font-size: 14.5px; font-weight: 600; text-decoration: none; color: var(--soft); transition: color .2s ease; }
+.nh-home:hover { color: var(--text); }
+.nh-home svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+a.nh-tag { text-decoration: none; }
+@media (max-width: 720px) { .nh-home span { display: none; } .nh-home { width: 40px; padding: 0; justify-content: center; } }
+
+/* ---- a story's own page, s/<id> (owner, 2026-10-21: "our own news page instead of redirecting to the source"): the
+   story on the left, a sponsored slot on the right, more stories below; one column on phones ---- */
+.sp { padding-top: 22px; padding-bottom: 64px; }
+.sp svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.sp-back { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 18px; font-size: 14.5px; font-weight: 600; text-decoration: none; color: var(--soft); }
+.sp-back:hover { color: var(--text); }
+.sp-g { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 44px; align-items: start; }
+.sp-art { min-width: 0; max-width: 760px; }
+.sp-art .src { padding-right: 0; font-size: 14px; }
+.sp-art .src .cat { text-decoration: none; }
+.sp-t { margin: 14px 0 20px; font-size: clamp(28px, 3.4vw, 42px); font-weight: 700; line-height: 1.15; letter-spacing: -.02em; color: var(--text); text-wrap: balance; }
+.sp-fig { margin: 0 0 22px; }
+.sp-fig img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--r-big); background: var(--surface); filter: var(--img); }
+.sp-fig figcaption { margin-top: 8px; font-size: 13px; color: var(--faint); }
+.sp-sum { margin: 0; font-size: clamp(18px, 1.5vw, 20px); line-height: 1.7; color: var(--text); }
+.sp-acts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+.sp-note { margin: 14px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--faint); }
+.sp-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+.sp-tags a { padding: 6px 13px; border-radius: 999px; background: var(--surface2); box-shadow: inset 0 0 0 1px var(--line); font-size: 13.5px; font-weight: 600; text-decoration: none; color: var(--soft); }
+.sp-tags a:hover { color: var(--text); }
+.sp-side { position: sticky; top: calc(var(--hdr) + 20px); }
+/* the sponsored slot: an example card in a made-up brand's colours, always marked as sponsored */
+.sp-ad-k { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.sp-ex { padding: 3px 10px; border-radius: 999px; background: rgba(255, 122, 69, .16); letter-spacing: 0; text-transform: none; font-size: 12px; color: #FFA27A; }
+.sp-ad-c { padding: 18px; border-radius: var(--r-card); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.sp-ad-top { display: flex; align-items: center; gap: 10px; }
+.sp-ad-logo { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 12px; background: linear-gradient(135deg, #FF7A45, #E2477F); font-size: 13px; font-weight: 700; color: #FFFFFF; }
+.sp-ad-top b { display: block; font-size: 15px; color: var(--text); }
+.sp-ad-top small { display: block; font-size: 12.5px; color: var(--soft); }
+.sp-ad-hero { margin-top: 14px; padding: 18px; border-radius: 18px; background: linear-gradient(135deg, #FF7A45 0%, #E2477F 100%); color: #FFFFFF; }
+.sp-ad-hero small { display: block; font-size: 12.5px; font-weight: 600; color: rgba(255, 255, 255, .9); }
+.sp-ad-hero b { display: block; margin-top: 4px; font-size: 26px; font-weight: 700; line-height: 1.1; letter-spacing: -.02em; }
+.sp-ad-hero span { display: block; margin-top: 2px; font-size: 14.5px; font-weight: 500; }
+.sp-ad-cta { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 46px; margin-top: 14px; border-radius: 999px; background: var(--text); font-size: 15px; font-weight: 600; text-decoration: none; color: var(--bg); }
+.sp-ad-cta:hover { opacity: .9; }
+.sp-ad-note { margin: 10px 2px 0; font-size: 13px; line-height: 1.5; color: var(--faint); }
+/* more stories */
+.sp-more { margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--line); }
+.sp-more h2 { margin: 0 0 20px; font-size: 24px; font-weight: 700; letter-spacing: -.01em; color: var(--text); }
+.sp-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 20px; }
+.sp-it { display: flex; flex-direction: column; gap: 10px; min-width: 0; text-decoration: none; color: inherit; }
+.sp-it-img { aspect-ratio: 16 / 9; overflow: hidden; border-radius: var(--r-thumb); background: var(--surface); }
+.sp-it-img img { display: block; width: 100%; height: 100%; object-fit: cover; filter: var(--img); transition: transform .4s ease; }
+.sp-it:hover .sp-it-img img { transform: scale(1.03); }
+.sp-it .src { padding-right: 0; }
+.sp-it-t { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.35; color: var(--text); }
+.sp-it:hover .sp-it-t { color: var(--accent); }
+.sp-all { margin-top: 28px; }
+.sp-foot { padding: 26px 0 34px; border-top: 1px solid var(--line); font-size: 14px; color: var(--faint); }
+.sp-foot .nw { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.sp-foot a { font-weight: 600; text-decoration: none; color: var(--soft); }
+@media (max-width: 960px) { .sp-g { grid-template-columns: minmax(0, 1fr); gap: 32px; } .sp-side { position: static; max-width: 420px; } .sp-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .sp { padding-top: 14px; } .sp-list { grid-template-columns: minmax(0, 1fr); } .sp-acts .btn { flex: 1 1 100%; } .sp-side { max-width: none; } }
+.sp-art .src .cat, .sp-art .src .cat-sep { display: inline; }
