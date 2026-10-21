@@ -10,8 +10,9 @@ import { run, publishPage } from './fetch-news.mjs';
 import { parseFeed, snippet, cleanUrl, sharePage } from './lib.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url)), OUT = path.join(HERE, '.test-out'), CACHE = path.join(OUT, '.cache');
-const NOW = Date.parse('2026-10-21T12:00:00Z'), iso = h => new Date(NOW - h * 36e5).toUTCString();
-const RSS = `<?xml version="1.0"?><rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>A</title>
+const NOW = Date.parse('2026-10-21T12:00:00Z');
+let T = NOW; const iso = h => new Date(T - h * 36e5).toUTCString(); // the sample feeds are dated against T
+const RSS = () => `<?xml version="1.0"?><rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>A</title>
 <item><title><![CDATA[OpenAI raises <b>$10B</b> &amp; more — India push]]></title><link>https://a.example/story-one/?utm_source=rss&amp;id=7#top</link><pubDate>${iso(1)}</pubDate>
 <description><![CDATA[<p>Big round for the <a href="x">AI</a> lab.</p><script>alert(1)</script>]]></description><content:encoded><![CDATA[<img src="https://a.example/one.jpg"><p>Body</p>]]></content:encoded></item>
 <item><title>Same headline twice</title><link>https://a.example/two</link><pubDate>${iso(2)}</pubDate><description>First copy</description></item>
@@ -19,25 +20,26 @@ const RSS = `<?xml version="1.0"?><rss version="2.0" xmlns:content="http://purl.
 <item><title>Bad link story</title><link>javascript:alert(1)</link><pubDate>${iso(1)}</pubDate></item>
 <item><title>Data image story about a ransomware breach</title><link>https://a.example/three</link><pubDate>${iso(4)}</pubDate><enclosure url="data:image/png;base64,AAAA" type="image/png"/><description>The post Data image story appeared first on A.</description></item>
 </channel></rss>`;
-const ATOM = `<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><title>B</title>
-<entry><title>New iPhone hands-on</title><link rel="alternate" href="https://b.example/iphone"/><published>${new Date(NOW - 5 * 36e5).toISOString()}</published>
+const ATOM = () => `<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><title>B</title>
+<entry><title>New iPhone hands-on</title><link rel="alternate" href="https://b.example/iphone"/><published>${new Date(T - 5 * 36e5).toISOString()}</published>
 <content type="html">&lt;figure&gt;&lt;img src="https://b.example/iphone.jpg"&gt;&lt;/figure&gt;&lt;p&gt;We tried the new phone. It is fast.&lt;/p&gt;</content></entry>
-<entry><title>An entry with no picture</title><link href="https://b.example/nopic"/><updated>${new Date(NOW - 6 * 36e5).toISOString()}</updated><summary>Short &amp; sweet.</summary></entry></feed>`;
-const MEDIA = `<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><item><title>Bengaluru startup ships an app</title><link>https://c.example/app</link><pubDate>${iso(7)}</pubDate><media:thumbnail url="https://c.example/app.jpg" width="640"/><description>A Bengaluru startup.</description></item></channel></rss>`;
-const HN = `<rss version="2.0"><channel><item><title>Show HN: A tiny database</title><link>https://d.example/db</link><pubDate>${iso(8)}</pubDate><description><![CDATA[<p>Article URL: <a href="https://d.example/db">https://d.example/db</a></p><p>Points: 120</p>]]></description></item></channel></rss>`;
+<entry><title>An entry with no picture</title><link href="https://b.example/nopic"/><updated>${new Date(T - 6 * 36e5).toISOString()}</updated><summary>Short &amp; sweet.</summary></entry></feed>`;
+const MEDIA = () => `<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><item><title>Bengaluru startup ships an app</title><link>https://c.example/app</link><pubDate>${iso(7)}</pubDate><media:thumbnail url="https://c.example/app.jpg" width="640"/><description>A Bengaluru startup.</description></item></channel></rss>`;
+const HN = () => `<rss version="2.0"><channel><item><title>Show HN: A tiny database</title><link>https://d.example/db</link><pubDate>${iso(8)}</pubDate><description><![CDATA[<p>Article URL: <a href="https://d.example/db">https://d.example/db</a></p><p>Points: 120</p>]]></description></item></channel></rss>`;
 const ARTICLE = `<html><head><meta content="https://b.example/nopic-og.jpg" property="og:image"></head><body>x</body></html>`;
 const SOURCES = [
   { name: 'Alpha', domain: 'a.example', urls: ['https://feeds.test/a'] },
   { name: 'Beta', domain: 'b.example', urls: ['https://feeds.test/b'] },
-  { name: 'Gamma', domain: 'c.example', urls: ['https://feeds.test/missing', 'https://feeds.test/c'], india: true },
+  { name: 'Gamma', domain: 'c.example', urls: ['https://feeds.test/missing', 'https://feeds.test/c'], india: true, cat: 'Economy' },
   { name: 'Hacker News', domain: 'news.ycombinator.com', urls: ['https://feeds.test/hn'] },
   { name: 'Missing', domain: 'm.example', urls: ['https://feeds.test/missing'] },
   { name: 'Broken', domain: 'x.example', urls: ['https://feeds.test/broken'] }
 ];
-const PAGES = { 'https://feeds.test/a': RSS, 'https://feeds.test/b': ATOM, 'https://feeds.test/c': MEDIA, 'https://feeds.test/hn': HN, 'https://feeds.test/broken': '<html><body>Service unavailable</body></html>', 'https://b.example/nopic': ARTICLE };
+const pages = () => ({ 'https://feeds.test/a': RSS(), 'https://feeds.test/b': ATOM(), 'https://feeds.test/c': MEDIA(), 'https://feeds.test/hn': HN(), 'https://feeds.test/broken': '<html><body>Service unavailable</body></html>', 'https://b.example/nopic': ARTICLE });
 const fakeFetch = (fail) => async (url) => {
-  if (fail || !(url in PAGES)) return { ok: false, status: 404, text: async () => 'nope' };
-  return { ok: true, status: 200, text: async () => PAGES[url] };
+  const P = pages();
+  if (fail || !(url in P)) return { ok: false, status: 404, text: async () => 'nope' };
+  return { ok: true, status: 200, text: async () => P[url] };
 };
 const quiet = () => {};
 let passed = 0; const t = (name, fn) => { fn(); passed++; console.log('ok   ' + name); };
@@ -46,14 +48,14 @@ fs.rmSync(OUT, { recursive: true, force: true });
 
 // unit checks
 t('plain text from HTML, no em dash, no scripts', () => {
-  const it = parseFeed(RSS, 'https://feeds.test/a')[0];
+  const it = parseFeed(RSS(), 'https://feeds.test/a')[0];
   assert.equal(it.title, 'OpenAI raises $10B & more – India push');
   assert.equal(it.snippet, 'Big round for the AI lab.');
   assert.equal(it.image, 'https://a.example/one.jpg');
 });
 t('tracking parameters and fragments removed from links', () => assert.equal(cleanUrl('https://A.example/x/?utm_source=rss&id=7#top'), 'https://a.example/x?id=7'));
 t('snippets stop at 160 characters on a word', () => { const s = snippet('word '.repeat(80)); assert.ok(s.length <= 160 && s.endsWith('…')); });
-t('Atom with escaped HTML gives its picture', () => assert.equal(parseFeed(ATOM, 'https://feeds.test/b')[0].image, 'https://b.example/iphone.jpg'));
+t('Atom with escaped HTML gives its picture', () => assert.equal(parseFeed(ATOM(), 'https://feeds.test/b')[0].image, 'https://b.example/iphone.jpg'));
 t('a page that is not a feed is rejected', () => assert.throws(() => parseFeed('<html></html>')));
 
 // the whole run
@@ -79,16 +81,23 @@ t('only http/https images; og:image used when the feed has none', () => {
 t('categories and India tags', () => {
   const g = n => news.stories.find(s => s.title.startsWith(n));
   assert.equal(g('OpenAI').category, 'AI'); assert.ok(g('OpenAI').tags.includes('India'));
+  assert.equal(g('Bengaluru').category, 'Economy', 'a topic source gives its topic');
   assert.equal(g('Data image').category, 'Security'); assert.equal(g('New iPhone').category, 'Gadgets');
   assert.ok(g('Bengaluru').tags.includes('India'));
+});
+t('every story has a summary for the phone cards, at least as long as its snippet', () => {
+  assert.ok(news.stories.every(s => typeof s.summary === 'string' && s.summary.length >= s.snippet.length && s.summary.length <= 430));
+  assert.equal(news.stories.find(s => s.title.startsWith('New iPhone')).summary, 'We tried the new phone. It is fast.');
 });
 t('Hacker News link text is not used as a snippet', () => assert.equal(news.stories.find(s => s.source === 'Hacker News').snippet, ''));
 t('share pages exist with escaped preview tags', () => {
   const s = news.stories.find(x => x.title.startsWith('OpenAI')), html = fs.readFileSync(path.join(OUT, 's', s.id + '.html'), 'utf8');
   assert.match(html, /<meta property="og:title" content="OpenAI raises \$10B &amp; more – India push">/);
-  assert.match(html, /<meta property="og:image" content="https:\/\/a\.example\/one\.jpg">/);
+  assert.ok(html.includes('og:image" content="https://wsrv.nl/?url=https%3A%2F%2Fa.example%2Fone.jpg&amp;w=1200&amp;h=630&amp;fit=cover&amp;a=attention&amp;output=jpg&amp;q=65"'), 'a small JPEG preview WhatsApp can show');
+  assert.ok(html.includes('og:image:width" content="1200"'));
   assert.match(html, /<meta property="og:site_name" content="Paiir News">/);
   assert.match(html, /twitter:card" content="summary_large_image"/);
+  assert.ok(html.includes('location.replace("https://paiir.in/news/?s=' + s.id + '")'), 'the share page opens the story on Paiir News');
   const noimg = news.stories.find(x => x.title.startsWith('Data image'));
   assert.match(fs.readFileSync(path.join(OUT, 's', noimg.id + '.html'), 'utf8'), /og:image" content="https:\/\/paiir\.in\/news\/brand\/og-default\.png"/);
 });
@@ -100,6 +109,7 @@ const before = fs.readFileSync(path.join(OUT, 'news.json'), 'utf8');
 const r2 = await run({ fetch: fakeFetch(true), out: OUT, cache: CACHE, base: 'https://paiir.in/news', sources: SOURCES, log: quiet, now: NOW + 36e5, skipPage: true });
 t('when every feed fails, the old news.json stays', () => { assert.equal(r2.ok, false); assert.equal(fs.readFileSync(path.join(OUT, 'news.json'), 'utf8'), before); });
 const late = NOW + 40 * 864e5;
+T = late; // the feeds have moved on: new stories, dated against the later clock
 await run({ fetch: async (u) => (u === 'https://feeds.test/a' ? { ok: false, status: 500, text: async () => '' } : fakeFetch(false)(u)), out: OUT, cache: CACHE, base: 'https://paiir.in/news', sources: SOURCES, log: quiet, now: late, skipPage: true });
 t('share pages older than 30 days are removed', () => {
   const one = news.stories.find(x => x.title.startsWith('OpenAI'));
@@ -120,9 +130,8 @@ t('page addresses are filled in for paiir.in/news', () => {
   assert.ok(!/\{\{(HOME|BASE|PATH)\}\}/.test(html + js));
   assert.ok(html.includes('og:image" content="https://paiir.in/news/brand/og-default.png"'));
   assert.ok(html.includes('href="/news/news.css"') && js.includes("fetch('/news/news.json?t='"));
-  assert.ok(js.includes("'https://paiir.in/news/s/'"));
+  assert.ok(js.includes("NEWS = 'https://paiir.in/news/'") && js.includes("HOME = 'https://paiir.in/'"));
   assert.ok(html.includes('href="https://paiir.in/#bridge"'));
-  assert.ok(js.includes("'https://paiir.in/#founder-hub'"));
 });
 fs.rmSync(OUT, { recursive: true, force: true });
 console.log('\n' + passed + ' checks passed');

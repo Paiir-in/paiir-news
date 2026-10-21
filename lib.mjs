@@ -13,7 +13,18 @@ export const SOURCES = [
   { name: 'Hacker News', domain: 'news.ycombinator.com', urls: ['https://hnrss.org/frontpage'] },
   { name: 'Inc42', domain: 'inc42.com', urls: ['https://inc42.com/feed/'], india: true },
   { name: 'YourStory', domain: 'yourstory.com', urls: ['https://yourstory.com/feed'], india: true },
-  { name: 'Gadgets 360', domain: 'gadgets360.com', urls: ['https://feeds.feedburner.com/gadgets360-latest', 'https://www.gadgets360.com/rss/news'], india: true }
+  { name: 'Gadgets 360', domain: 'gadgets360.com', urls: ['https://feeds.feedburner.com/gadgets360-latest', 'https://www.gadgets360.com/rss/news'], india: true },
+  // topics beyond tech (owner, 2026-10-21): readers pick what they want to see
+  { name: 'Mint', domain: 'livemint.com', urls: ['https://www.livemint.com/rss/economy'], cat: 'Economy', india: true },
+  { name: 'Economic Times', domain: 'economictimes.indiatimes.com', urls: ['https://economictimes.indiatimes.com/news/economy/rssfeeds/1373380680.cms'], cat: 'Economy', india: true },
+  { name: 'BBC Business', domain: 'bbc.com', urls: ['https://feeds.bbci.co.uk/news/business/rss.xml'], cat: 'Economy' },
+  { name: 'Dezeen', domain: 'dezeen.com', urls: ['https://www.dezeen.com/feed/'], cat: 'Design' },
+  { name: 'Creative Bloq', domain: 'creativebloq.com', urls: ['https://www.creativebloq.com/feeds.xml'], cat: 'Design' },
+  { name: 'Fast Company', domain: 'fastcompany.com', urls: ['https://www.fastcompany.com/co-design/rss'], cat: 'Design' },
+  { name: 'BBC Science', domain: 'bbc.com', urls: ['https://feeds.bbci.co.uk/news/science_and_environment/rss.xml'], cat: 'Science' },
+  { name: 'BBC Health', domain: 'bbc.com', urls: ['https://feeds.bbci.co.uk/news/health/rss.xml'], cat: 'Health' },
+  { name: 'Scarleteen', domain: 'scarleteen.com', urls: ['https://www.scarleteen.com/rss.xml'], cat: 'Sex education', days: 60 },
+  { name: 'ScienceDaily', domain: 'sciencedaily.com', urls: ['https://www.sciencedaily.com/rss/health_medicine/sexual_health.xml'], cat: 'Sex education', days: 30 }
 ];
 
 const NAMED = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“', hellip: '…', ndash: '–', mdash: '–', middot: '·', bull: '•', copy: '©', reg: '®', trade: '™', rarr: '→', larr: '←', times: '×', eacute: 'é', egrave: 'è', aacute: 'á', iacute: 'í', oacute: 'ó', uacute: 'ú', ntilde: 'ñ', uuml: 'ü', ouml: 'ö', auml: 'ä', rupee: '₹' };
@@ -30,6 +41,13 @@ export function plain(s) {
   if (/&lt;\s*[a-z/!]/i.test(t) && !/<[a-z/!]/i.test(t)) t = decode(t);
   t = t.replace(/<(script|style|noscript|iframe)[\s\S]*?<\/\1>/gi, ' ').replace(/<!--[\s\S]*?-->/g, ' ').replace(/<br\s*\/?>|<\/p>|<\/li>|<\/h\d>/gi, ' ').replace(/<[^>]*>/g, ' ');
   return decode(t).replace(/—/g, '–').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f​]/g, '').replace(/\s+/g, ' ').trim();
+}
+// about 60 words, ending on a full sentence where one fits (the phone cards read like Inshorts)
+export function summary(s, max = 420) {
+  const t = snippet(s, 100000);
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max), end = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('? '), cut.lastIndexOf('! '));
+  return end > max * 0.5 ? cut.slice(0, end + 1) : snippet(t, max);
 }
 export function snippet(s, max = 160) {
   let t = plain(s).replace(/The post .{3,300}? appeared first on .{2,80}?\.?$/i, '').replace(/\s*(Read more|Continue reading|Read the full story)\b.*$/i, '').trim();
@@ -78,6 +96,8 @@ function linkOf(item, base) {
   const l = plain(tag(item, 'link')); if (l) return safeUrl(l, base);
   const g = tag(item, 'guid'); return /^https?:/i.test(plain(g)) ? safeUrl(plain(g), base) : '';
 }
+// some feeds point at a thumbnail; ask for the larger copy the same server already has (BBC: 240 to 976 pixels wide)
+export const sharper = u => String(u || '').replace(/^(https:\/\/ichef\.bbci\.co\.uk\/ace\/(?:standard|ws))\/\d{2,3}\//, '$1/976/').replace(/^(https:\/\/ichef\.bbci\.co\.uk\/images\/ic)\/\d{2,3}x\d{2,3}\//, '$1/976x549/');
 // every story in one feed (RSS <item> or Atom <entry>)
 export function parseFeed(xml, base) {
   if (typeof xml !== 'string' || !/<(rss|feed|rdf:RDF)\b/i.test(xml)) throw new Error('not a feed');
@@ -86,7 +106,9 @@ export function parseFeed(xml, base) {
     const it = m[2], title = plain(tag(it, 'title')), link = linkOf(it, base);
     if (!title || !link) continue;
     const when = Date.parse(plain(tag(it, 'pubDate') || tag(it, 'published') || tag(it, 'updated') || tag(it, 'dc:date')));
-    out.push({ title, link, published: isFinite(when) ? new Date(when).toISOString() : '', snippet: snippet(tag(it, 'description') || tag(it, 'summary') || tag(it, 'content:encoded') || tag(it, 'content')), image: imageOf(it, base) });
+    const short = tag(it, 'description') || tag(it, 'summary') || tag(it, 'content:encoded') || tag(it, 'content'), long = tag(it, 'content:encoded') || tag(it, 'content') || short;
+    const sum = summary(long), sumShort = summary(short);
+    out.push({ title, link, published: isFinite(when) ? new Date(when).toISOString() : '', snippet: snippet(short), summary: sum.length > sumShort.length ? sum : sumShort, image: sharper(imageOf(it, base)) });
   }
   return out;
 }
@@ -108,9 +130,22 @@ const KW = {
   Apps: /\b(apps?|ios \d+|ios|android \d+|whatsapp|instagram|threads|tiktok|youtube|chrome|browser|windows \d+|windows|macos|software update|spotify|netflix|play store|app store)\b/i
 };
 const INDIA = /\b(india|indian|bengaluru|bangalore|mumbai|delhi|hyderabad|chennai|pune|gurugram|noida|rupees?|crore|lakh|upi|sebi|rbi|meity|isro|jio|reliance|tata|infosys|flipkart|zomato|swiggy|paytm|ola|byju'?s)\b|₹/i;
-export const CATEGORIES = ['AI', 'Startups', 'Gadgets', 'Apps', 'Security', 'India'];
+const MORE = {
+  Economy: /\b(econom(y|ic|ics)|inflation|gdp|recession|interest rates?|repo rate|tariffs?|stock markets?|sensex|nifty|budget|fiscal|rupee|exports?|imports?)\b/i,
+  Design: /\b(design(er|ers|ed)?|typography|ui\/ux|ux|branding|logo|architecture|interiors?)\b/i,
+  Science: /\b(scien(ce|tists?)|nasa|isro|space|astronom\w*|physics|biolog\w*|climate|species|fossils?)\b/i,
+  Health: /\b(health|medic(al|ine)|disease|vaccines?|cancer|mental health|doctors?|hospitals?|nutrition)\b/i
+};
+export const CATEGORIES = ['AI', 'Startups', 'Economy', 'Design', 'Gadgets', 'Apps', 'Security', 'Science', 'Health', 'Sex education', 'India'];
 export function categorise(title, snip, src) {
-  const t = title + ' ' + snip, tags = Object.keys(KW).filter(k => KW[k].test(t));
+  const t = title + ' ' + snip;
+  if (src && src.cat) {
+    // a topic source: its topic first, then any other topic its words clearly belong to
+    const tags = [src.cat].concat(Object.keys(MORE).filter(k => k !== src.cat && MORE[k].test(title)));
+    if (src.india || INDIA.test(title)) tags.push('India');
+    return { category: src.cat, tags: [...new Set(tags)] };
+  }
+  const tags = Object.keys(KW).filter(k => KW[k].test(t)).concat(Object.keys(MORE).filter(k => MORE[k].test(title)));
   if (src && src.india || INDIA.test(title)) tags.push('India');
   const order = ['AI', 'Security', 'Startups', 'Gadgets', 'Apps'];
   const cat = order.find(k => KW[k].test(title)) || order.find(k => tags.includes(k)) || (tags.includes('India') ? 'India' : 'Tech');
@@ -118,15 +153,17 @@ export function categorise(title, snip, src) {
 }
 
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-// the tiny page behind every share link: preview tags for WhatsApp, LinkedIn and X, then on to the story on the news page
+// the tiny page behind a share link: preview tags for WhatsApp, LinkedIn and X, then on to the story on the Paiir News
+// screen (owner: the story shows on Paiir; "Read more" there opens the publisher)
 export function sharePage(st, base, ogDefault) {
-  const root = base.replace(/\/+$/, ''), url = root + '/s/' + st.id, img = safeUrl(st.image) || ogDefault, back = root + '/?s=' + encodeURIComponent(st.id);
+  const root = base.replace(/\/+$/, ''), url = root + '/s/' + st.id, pic = safeUrl(st.image), back = root + '/?s=' + encodeURIComponent(st.id);
+  const img = pic ? 'https://wsrv.nl/?url=' + encodeURIComponent(pic) + '&w=1200&h=630&fit=cover&a=attention&output=jpg&q=65' : ogDefault;
   const desc = st.snippet || ('From ' + st.source + ' on Paiir News.');
   return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n' +
     '<title>' + esc(st.title) + ' · Paiir News</title>\n<meta name="description" content="' + esc(desc) + '">\n<meta name="robots" content="noindex">\n' +
     '<meta property="og:type" content="article"><meta property="og:site_name" content="Paiir News">\n<meta property="og:title" content="' + esc(st.title) + '">\n<meta property="og:description" content="' + esc(desc) + '">\n' +
-    '<meta property="og:image" content="' + esc(img) + '">\n<meta property="og:url" content="' + esc(url) + '">\n<meta name="twitter:card" content="summary_large_image">\n<meta name="twitter:title" content="' + esc(st.title) + '">\n<meta name="twitter:image" content="' + esc(img) + '">\n' +
+    '<meta property="og:image" content="' + esc(img) + '">\n<meta property="og:image:type" content="' + (pic ? 'image/jpeg' : 'image/png') + '"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">\n<meta property="og:url" content="' + esc(url) + '">\n<meta name="twitter:card" content="summary_large_image">\n<meta name="twitter:title" content="' + esc(st.title) + '">\n<meta name="twitter:image" content="' + esc(img) + '">\n' +
     '<link rel="canonical" href="' + esc(url) + '"><link rel="icon" href="' + esc(root + '/brand/paiir-mark.svg') + '" type="image/svg+xml">\n' +
     '<style>body{margin:0;display:grid;place-items:center;min-height:100vh;font:16px/1.5 Figtree,system-ui,sans-serif;color:#111318;background:#FFFFFF}a{color:#0A6CFF}</style></head>\n' +
-    '<body><p><a href="' + esc(back) + '">' + esc(st.title) + ' · Open on Paiir News</a></p>\n<script>location.replace(' + JSON.stringify(back) + ');</script></body></html>\n';
+    '<body><p><a href="' + esc(back) + '">' + esc(st.title) + ' · Read it on Paiir News</a></p>\n<script>location.replace(' + JSON.stringify(back).replace(/</g, '\\u003c') + ');</script></body></html>\n';
 }

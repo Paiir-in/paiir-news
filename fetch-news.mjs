@@ -14,7 +14,7 @@ import { SOURCES, parseFeed, cleanUrl, idOf, titleKey, categorise, ogImage, shar
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const UA = 'Mozilla/5.0 (compatible; PaiirNews/1.0; +https://paiir.in/news/)';
-const KEEP = 80, SHARE_DAYS = 30, STALE_HOURS = 24, DAY = 864e5;
+const KEEP = 200, PER_SOURCE = 10, MAX_DAYS = 7, SHARE_DAYS = 30, STALE_HOURS = 24, DAY = 864e5;
 
 const readJSON = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
 const writeAtomic = (f, s) => { fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f + '.tmp', s); fs.renameSync(f + '.tmp', f); };
@@ -93,15 +93,22 @@ export async function run(o = {}) {
   for (const it of items) {
     const link = cleanUrl(it.link); if (!link) continue;
     const c = categorise(it.title, it.snippet, it.src);
-    add({ id: idOf(link), title: it.title.slice(0, 220), link, source: it.src.name, domain: cleanDomain(it.src.domain), published: it.published || new Date(now).toISOString(), snippet: it.snippet, image: it.image, category: c.category, tags: c.tags });
+    if (it.published && now - Date.parse(it.published) > (it.src.days || MAX_DAYS) * DAY) continue;
+    add({ id: idOf(link), title: it.title.slice(0, 220), link, source: it.src.name, domain: cleanDomain(it.src.domain), published: it.published || new Date(now).toISOString(), snippet: it.snippet, summary: it.summary || it.snippet, image: it.image, category: c.category, tags: c.tags });
   }
   if (prev && Array.isArray(prev.stories)) prev.stories.filter(s => failed.has(s.source) && now - Date.parse(s.published) < STALE_HOURS * 36e5).forEach(add);
   stories.sort((a, b) => Date.parse(b.published) - Date.parse(a.published));
-  // at most 12 from one source, so a busy feed (Gadgets 360 posts 100 a day) never crowds out the rest; then fill up
+  // the newest 10 from each source, so a busy feed (Gadgets 360 posts 100 a day) never crowds out a quiet topic
   const per = {}, latest = [];
-  for (const s of stories) { if (latest.length >= KEEP) break; if ((per[s.source] = (per[s.source] || 0) + 1) <= 12) latest.push(s); }
-  for (const s of stories) { if (latest.length >= KEEP) break; if (!latest.includes(s)) latest.push(s); }
+  for (const s of stories) { if (latest.length >= KEEP) break; if ((per[s.source] = (per[s.source] || 0) + 1) <= PER_SOURCE) latest.push(s); }
   latest.sort((a, b) => Date.parse(b.published) - Date.parse(a.published));
+  if (!latest.length) {
+    // feeds answered but every story was too old: keep the last good ones rather than publish an empty page
+    if (!fs.existsSync(path.join(out, 'news.json')) && prev) writeAtomic(path.join(out, 'news.json'), JSON.stringify(prev));
+    writeShares(out, cache, base, now, prev && prev.stories);
+    log('No new stories. Keeping the last good news.json.');
+    return { ok: false, report };
+  }
 
   // 3. images: from the feed; else reuse what an earlier run found; else the article's og:image (5 seconds, once)
   const imgCache = readJSON(path.join(cache, 'images.json'), {});

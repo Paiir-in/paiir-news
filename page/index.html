@@ -3,18 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Paiir News · Tech news, every hour</title>
-<meta name="description" content="The latest from trusted tech sources, in one place. Free to read, always linked to the original.">
-<meta name="theme-color" content="#FFFFFF">
+<title>Paiir News · News, every hour</title>
+<meta name="description" content="Tech, startups, the economy, design, science and health, from trusted sources in one place. Free to read, always linked to the original.">
+<meta name="theme-color" content="#0E1014">
+<meta name="color-scheme" content="dark">
 <link rel="icon" href="{{PATH}}brand/paiir-mark.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="{{PATH}}brand/paiir-app-icon.png">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Paiir News">
-<meta property="og:title" content="Paiir News · Tech news, every hour">
-<meta property="og:description" content="The latest from trusted tech sources, in one place. Free to read, always linked to the original.">
+<meta property="og:title" content="Paiir News · News, every hour">
+<meta property="og:description" content="Tech, startups, the economy, design, science and health, from trusted sources in one place. Free to read, always linked to the original.">
 <meta property="og:image" content="{{BASE}}/brand/og-default.png">
 <meta property="og:url" content="{{BASE}}/">
 <meta name="twitter:card" content="summary_large_image">
+<script>try { if (localStorage.getItem('paiir-news-dim') === '1') document.documentElement.classList.add('dim'); } catch (e) {}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400..800;1,400..800&display=swap">
@@ -24,21 +26,23 @@
 <a class="skip" href="#feed">Skip to the stories</a>
 <header class="nh">
   <div class="nw nh-in">
-    <a class="nh-logo" href="{{HOME}}" aria-label="Paiir home"><picture><source srcset="{{PATH}}brand/paiir-logo-on-dark.svg" media="(prefers-color-scheme: dark)"><img src="{{PATH}}brand/paiir-logo-on-light.svg" alt="Paiir" width="84" height="40"></picture></a>
-    <span class="nh-tag">News</span>
-    <nav class="nh-nav" aria-label="Paiir News">
-      <a class="nh-link" href="#explore">Explore Paiir</a>
-      <a class="btn btn-sec btn-sm" href="{{HOME}}">paiir.in</a>
-    </nav>
+    <a class="nh-logo" href="{{HOME}}" aria-label="Paiir home"><img src="{{PATH}}brand/paiir-logo-on-dark.svg" alt="Paiir" width="84" height="40"></a>
+    <span class="nh-tag"><i aria-hidden="true"></i>News</span>
+    <div class="nh-right">
+      <button type="button" class="dim-btn" id="dimBtn" aria-pressed="false" title="A warmer, softer light for reading">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg><span>Dim light</span>
+      </button>
+      <a class="nh-link" href="{{HOME}}">paiir.in</a>
+    </div>
   </div>
 </header>
 
 <main id="main">
-  <section class="hero">
-    <div class="nw hero-in">
-      <span class="chip-status"><i aria-hidden="true"></i><span id="updated">Loading the latest stories</span></span>
-      <h1 class="hero-h">Tech news,<span class="blue"> every hour.</span></h1>
-      <p class="hero-p">The latest from trusted tech sources, in one place. Free to read, always linked to the original.</p>
+  <section class="top">
+    <div class="nw top-in">
+      <p class="top-k"><span id="today"></span><span class="sep" aria-hidden="true">·</span><span class="live"><i aria-hidden="true"></i><span id="updated">Loading the latest stories</span></span></p>
+      <h1 class="top-h">The news you care about,<span class="hl"> every hour.</span></h1>
+      <p class="top-p">Tech, startups, the economy, design, science and health, from trusted sources in one place. Pick your topics. Free to read, always linked to the original.</p>
     </div>
   </section>
 
@@ -46,31 +50,33 @@
     <div class="nw chips" id="chips" role="group" aria-label="Topics"></div>
   </div>
 
-  <div class="nw feed-wrap">
-    <div id="shared"></div>
-    <div id="feed" aria-live="polite" aria-busy="true"></div>
-    <div class="more" id="more" hidden><button type="button" class="btn btn-sec" id="moreBtn">Show more stories</button></div>
-    <p class="feed-note">Paiir News is free and has no ads. Headlines and images belong to their publishers. Every story links to the original.</p>
+  <!-- phones: one story per screen, swipe up for the next (news.js fills it) -->
+  <div class="pager" id="pager" aria-label="Stories, one at a time"></div>
+
+  <div class="nw layout">
+    <div class="col">
+      <div id="feed" aria-live="polite" aria-busy="true"></div>
+      <div class="more" id="more" hidden><button type="button" class="btn btn-sec" id="moreBtn">Show more stories</button></div>
+    </div>
+    <aside class="side" aria-label="About Paiir">
+      <div class="side-in" id="side"></div>
+    </aside>
   </div>
 
   <section class="explore" id="explore" aria-labelledby="exploreH"></section>
 </main>
 
 <footer class="nf">
-  <div class="nw">
+  <div class="nw nf-in">
+    <a class="nf-logo" href="{{HOME}}" aria-label="Paiir home"><img src="{{PATH}}brand/paiir-logo-on-dark.svg" alt="Paiir" width="67" height="32"></a>
     <nav class="nf-links" aria-label="Paiir">
-      <a href="{{HOME}}#products">Ways to earn</a><a href="{{HOME}}#experts">Find a mentor</a><a href="{{HOME}}#founder-hub">Founder Hub</a><a href="{{HOME}}#bridge">Paiir Bridge</a><a href="{{HOME}}#pricing">Pricing</a>
+      <a href="{{HOME}}#products">Ways to earn</a><a href="{{HOME}}#experts">Find a mentor</a><a href="{{HOME}}#founder-hub">Founder Hub</a><a href="{{HOME}}#bridge">Paiir Bridge</a>
     </nav>
-    <canvas class="nf-dots" id="dots" aria-hidden="true"></canvas>
-    <div class="nf-bottom">
-      <a class="nf-logo" href="{{HOME}}" aria-label="Paiir home"><img src="{{PATH}}brand/paiir-logo-on-dark.svg" alt="Paiir" width="76" height="36"></a>
-      <span>© 2026 Paiir · Made in India</span>
-    </div>
+    <p class="nf-note">Paiir News is free and has no ads. Headlines and images belong to their publishers, and every story links to the original. © 2026 Paiir · Made in India</p>
   </div>
 </footer>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="{{PATH}}news.js" defer></script>
-<script src="{{PATH}}dots.js" defer></script>
 </body>
 </html>
