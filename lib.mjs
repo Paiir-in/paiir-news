@@ -228,7 +228,7 @@ export function storyPage(st, base, home, ogDefault, ver) {
     '<a class="btn btn-sec sp-all" href="' + esc(root + '/') + '">See all the news' + arrow + '</a></section>\n</main>\n' +
     '<footer class="sp-foot"><div class="nw"><span>Paiir News · News you care about, every hour</span><a href="' + esc(home) + '">paiir.in</a></div></footer>\n' +
     '<div class="toast" id="toast" role="status" aria-live="polite"></div>\n' +
-    '<script>window.PAIIR_STORY = ' + data + ';</script>\n<script src="' + esc(at + 'story.js' + v) + '" defer></script>\n</body></html>\n';
+    '<script>window.PAIIR_STORY = ' + data + ';</script>\n<script src="' + esc(at + 'story.js' + v) + '" defer></script>\n<script src="' + esc(at + 'track.js' + v) + '" defer></script>\n</body></html>\n';
 }
 // the old name, for anything that still calls it
 export const sharePage = (st, base, ogDefault, home, ver) => storyPage(st, base, home || 'https://paiir.in/', ogDefault, ver);

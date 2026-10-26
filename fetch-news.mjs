@@ -31,7 +31,7 @@ export function settings(o = {}) {
 // a fingerprint of the page files: every link to them carries it (?v=), so a release reaches readers at once
 export function pageVersion() {
   const h = createHash('sha1');
-  for (const f of ['news.css', 'news.js', 'story.js', 'index.html']) { const p = path.join(HERE, 'page', f); if (fs.existsSync(p)) h.update(fs.readFileSync(p)); }
+  for (const f of ['news.css', 'news.js', 'story.js', 'track.js', 'index.html']) { const p = path.join(HERE, 'page', f); if (fs.existsSync(p)) h.update(fs.readFileSync(p)); }
   return h.digest('hex').slice(0, 10);
 }
 // the page files, with the addresses filled in ({{HOME}} = paiir.in, {{BASE}} = the news page itself, {{PATH}} = its
