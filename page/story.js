@@ -28,11 +28,24 @@
   var fig = document.querySelector('.sp-fig img'); if (fig) fig.addEventListener('error', function () { fig.parentNode.remove(); });
   var fv = document.querySelector('.sp-art .fav'); if (fv && fv.tagName === 'IMG') fv.addEventListener('error', function () { fv.replaceWith(letter(document.querySelector('.sp-art .src b').textContent, 'fav')); });
 
-  // Dim light, the same switch (and the same saved choice) as the News page
-  var dim = $('dimBtn'), root = document.documentElement;
-  var setDim = function (on) { root.classList.toggle('dim', on); dim.setAttribute('aria-pressed', on ? 'true' : 'false'); };
-  setDim(root.classList.contains('dim'));
-  dim.addEventListener('click', function () { var on = !root.classList.contains('dim'); setDim(on); try { localStorage.setItem('paiir-news-dim', on ? '1' : '0'); } catch (e) {} toast(on ? 'Dim light on. Easier on your eyes' : 'Dim light off'); });
+  // the reading light, the same choice (saved the same way) as the News reader: one tap moves Light, Dim, Warm
+  var LIGHTS = {
+    light: ['Light', 'dim', '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>', 'Bright and clear'],
+    dim: ['Dim', 'warm', '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>', 'Soft and dark, for the night'],
+    warm: ['Warm', 'light', '<path d="M12 10V2"/><path d="m4.93 10.93 1.41 1.41"/><path d="M2 18h2"/><path d="M20 18h2"/><path d="m19.07 10.93-1.41 1.41"/><path d="M22 22H2"/><path d="m16 6-4 4-4-4"/><path d="M16 18a4 4 0 0 0-8 0"/>', 'Less blue light, kind to tired eyes']
+  };
+  var lb = $('lightBtn'), root = document.documentElement;
+  var now = function () { var k = root.getAttribute('data-light'); return LIGHTS[k] ? k : 'light'; };
+  var drawLight = function () { var L = LIGHTS[now()]; lb.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + L[2] + '</svg><span>' + L[0] + '</span>'; lb.setAttribute('aria-label', 'Reading light: ' + L[0] + '. Switch to ' + LIGHTS[L[1]][0]); };
+  if (lb) {
+    drawLight();
+    lb.addEventListener('click', function () {
+      var k = LIGHTS[now()][1]; root.setAttribute('data-light', k); drawLight();
+      try { localStorage.setItem('paiir-news-light', k); } catch (e) {}
+      var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = { light: '#F3F4F6', dim: '#0E1014', warm: '#F0E7D8' }[k];
+      toast(LIGHTS[k][0] + ' light. ' + LIGHTS[k][3]);
+    });
+  }
 
   // share: the phone's own share sheet, or the link copied
   var url = location.href.split('#')[0].split('?')[0];

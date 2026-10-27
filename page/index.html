@@ -4,83 +4,63 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Paiir News · News you care about</title>
-<meta name="description" content="Pick your topics and get the latest every hour, from sources we trust. Easy on your eyes. Free, no ads.">
-<meta name="theme-color" content="#0E1014">
-<meta name="color-scheme" content="dark">
+<meta name="description" content="Startup and tech news from trusted sources, every hour. One story at a time: swipe up for the next, swipe left for the full story. Easy on your eyes.">
+<meta name="theme-color" content="#F3F4F6">
 <link rel="icon" href="{{PATH}}brand/paiir-mark.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="{{PATH}}brand/paiir-app-icon.png">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Paiir News">
 <meta property="og:title" content="Paiir News · News you care about">
-<meta property="og:description" content="Pick your topics and get the latest every hour, from sources we trust. Easy on your eyes. Free, no ads.">
+<meta property="og:description" content="Startup and tech news from trusted sources, every hour. One story at a time, easy on your eyes.">
 <meta property="og:image" content="{{BASE}}/brand/og-default.png">
 <meta property="og:url" content="{{BASE}}/">
 <meta name="twitter:card" content="summary_large_image">
-<script>try { if (localStorage.getItem('paiir-news-dim') === '1') document.documentElement.classList.add('dim'); } catch (e) {}</script>
+<!-- the reading light before the first paint: the reader's choice, else paiir.in's dark mode, else the phone's setting -->
+<script>(function () { var l = 'light', d = document.documentElement; try { l = localStorage.getItem('paiir-news-light') || (localStorage.getItem('paiir-news-dim') === '1' || localStorage.getItem('paiirScheme') === 'dark' ? 'dim' : (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dim' : 'light')); } catch (e) {} if (!/^(light|dim|warm)$/.test(l)) l = 'light'; d.setAttribute('data-light', l); var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = { light: '#F3F4F6', dim: '#0F1115', warm: '#F0E7D8' }[l]; })();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400..800;1,400..800&display=swap">
-<link rel="stylesheet" href="{{PATH}}news.css?v={{V}}">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400..700&display=swap">
+<link rel="preconnect" href="https://wsrv.nl">
+<link rel="stylesheet" href="{{PATH}}reader.css?v={{V}}">
 </head>
 <body>
-<a class="skip" href="#feed">Skip to the stories</a>
-<header class="nh">
-  <div class="nw nh-in">
-    <a class="nh-logo" href="{{HOME}}" aria-label="Paiir home"><img src="{{PATH}}brand/paiir-logo-on-dark.svg" alt="Paiir" width="84" height="40"></a>
-    <span class="nh-tag"><i aria-hidden="true"></i>News</span>
-    <div class="nh-right">
-      <button type="button" class="dim-btn" id="dimBtn" aria-pressed="false" title="A warmer, softer light for reading">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg><span>Dim light</span>
-      </button>
-      <a class="nh-home" href="{{HOME}}" aria-label="Paiir home"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>Home</span></a>
-    </div>
+<a class="skip" href="#deck">Skip to the stories</a>
+<header class="bar">
+  <a class="bar-id" href="{{PATH}}" aria-label="Paiir News, back to the first story" data-top><img src="{{PATH}}brand/paiir-mark.svg" alt="" width="30" height="30"><b>News</b></a>
+  <span class="live" id="live"><i aria-hidden="true"></i><span id="upd">Every hour</span></span>
+  <div class="bar-r">
+    <!-- phones and tablets: the topic you're reading opens Discover (the topics); computers have them in the rail. The reading light is only this bar's round button -->
+    <button type="button" class="pill pill-topic" id="topicBtn" aria-haspopup="dialog" aria-controls="disc"><span id="topicName">All news</span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+    <button type="button" class="round" id="lightBtn" aria-haspopup="true" aria-expanded="false" aria-label="Reading light"></button>
+    <a class="bar-home" href="{{HOME}}">paiir.in<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg></a>
   </div>
 </header>
 
-<main id="main">
-  <section class="top">
-    <div class="nw top-in">
-      <p class="top-k"><span id="today"></span><span class="sep" aria-hidden="true">·</span><span class="live"><i aria-hidden="true"></i><span id="updated">Loading the latest stories</span></span></p>
-      <h1 class="top-h">News you care about.<span class="hl"> Every hour.</span></h1>
-      <p class="top-p">Pick your topics. We bring you the latest from sources we trust, on a calm page that’s easy on your eyes.</p>
-      <div class="care">
-        <button type="button" class="care-b" data-topics><span class="care-i" aria-hidden="true"><svg viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg></span><span><b>Your topics</b><small>Only what you want to read</small></span></button>
-        <div class="care-b care-s"><span class="care-i" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg></span><span><b>Updated every hour</b><small>From sources we trust</small></span></div>
-        <button type="button" class="care-b" data-dim><span class="care-i" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span><span><b>Kind to your eyes</b><small data-dimnote>Turn on Dim light</small></span></button>
-      </div>
-    </div>
-  </section>
-
-  <div class="chips-bar">
-    <div class="nw chips" id="chips" role="group" aria-label="Topics"></div>
+<main class="stage" id="main">
+  <aside class="rail" id="rail" aria-label="Topics"></aside>
+  <div class="deck" id="deck" tabindex="-1" aria-roledescription="stories" aria-label="Stories, one at a time"></div>
+  <div class="nav" aria-label="Move between stories">
+    <button type="button" class="up" data-go="-1" aria-label="Previous story"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+    <button type="button" data-go="1" aria-label="Next story"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
   </div>
-
-  <!-- phones: one story per screen, swipe up for the next (news.js fills it) -->
-  <div class="pager" id="pager" aria-label="Stories, one at a time"></div>
-
-  <div class="nw layout">
-    <div class="col">
-      <div id="feed" aria-live="polite" aria-busy="true"></div>
-      <div class="more" id="more" hidden><button type="button" class="btn btn-sec" id="moreBtn">Show more stories</button></div>
-    </div>
-    <aside class="side" aria-label="About Paiir">
-      <div class="side-in" id="side"></div>
-    </aside>
-  </div>
-
-  <section class="explore" id="explore" aria-labelledby="exploreH"></section>
 </main>
 
-<footer class="nf">
-  <div class="nw nf-in">
-    <a class="nf-logo" href="{{HOME}}" aria-label="Paiir home"><img src="{{PATH}}brand/paiir-logo-on-dark.svg" alt="Paiir" width="67" height="32"></a>
-    <nav class="nf-links" aria-label="Paiir">
-      <a href="{{HOME}}#products">Ways to earn</a><a href="{{HOME}}#experts">Find a mentor</a><a href="{{HOME}}#founder-hub">Founder Hub</a><a href="{{HOME}}#bridge">Paiir Bridge</a><button type="button" class="nf-ad" data-advertise>Advertise with us</button>
-    </nav>
-    <p class="nf-note">Paiir News is free and has no ads. Headlines and images belong to their publishers, and every story links to the original. © 2026 Paiir</p>
+<!-- Discover, the topics: from the left (a swipe right on a story, or the topic button) -->
+<div class="ov" id="disc" hidden role="dialog" aria-modal="true" aria-labelledby="discH">
+  <div class="ov-bd" data-close></div>
+  <div class="disc-p">
+    <div class="disc-top"><h2 id="discH">Discover</h2><button type="button" class="ib" data-close aria-label="Close"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+    <div class="disc-sc" id="discBody"></div>
   </div>
-</footer>
+</div>
 
+<!-- the full story: from the right (a swipe left on a story, or Read the full story) -->
+<div class="ov" id="full" hidden role="dialog" aria-modal="true" aria-labelledby="fullT">
+  <div class="ov-bd" data-close></div>
+  <div class="full-p" id="fullP"></div>
+</div>
+
+<noscript><p style="padding:96px 24px;text-align:center">Paiir News needs JavaScript to show the stories. <a href="https://www.paiir.in/">Visit paiir.in</a></p></noscript>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="{{PATH}}news.js?v={{V}}" defer></script>
 <script src="{{PATH}}track.js?v={{V}}" defer></script>

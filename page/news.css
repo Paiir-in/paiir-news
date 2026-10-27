@@ -1,20 +1,34 @@
-/* Paiir News: a dark page made for reading (owner, 2026-10-21), in the Wink brand (Figtree, Paiir blue, large soft
-   corners). "Dim light" (html.dim) swaps to a warm, low-blue palette and softens the pictures, for tired eyes. */
+/* Paiir News story pages (s/<id>), in the Wink brand (Figtree, Paiir blue, large soft corners). They follow the reader's
+   reading light (owner, 2026-10-26): Light by default, Dim (html[data-light=dim], soft dark) and Warm (paper tones, less
+   blue light). The reader itself (index.html) has its own stylesheet, reader.css. */
 :root {
+  --bg: #F3F4F6; --bg2: #FFFFFF; --surface: #FFFFFF; --surface2: #ECEFF4; --line: #E3E6EB;
+  --text: #111318; --soft: #4A5160; --faint: #737B8B;
+  --accent: #0A6CFF; --fill: #0A6CFF; --fill-h: #0A5CD6; --green: #067647; --green-bg: #E3F6EB;
+  --glow: rgba(10, 108, 255, .08); --img: none;
+  --hdr: 72px; --r-card: 24px; --r-big: 28px; --r-thumb: 18px;
+  --font: Figtree, system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+html[data-light="dim"] {
   --bg: #0E1014; --bg2: #12151A; --surface: #161A20; --surface2: #1C2129; --line: #252B34;
   --text: #ECEFF4; --soft: #A3ABB9; --faint: #8A93A3;
   --accent: #5AA9FF; --fill: #0A6CFF; --fill-h: #2B80FF; --green: #3DDC97; --green-bg: rgba(18, 183, 106, .16);
-  --glow: rgba(10, 108, 255, .2); --img: none;
-  --hdr: 72px; --r-card: 24px; --r-big: 28px; --r-thumb: 18px;
-  --font: Figtree, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --glow: rgba(10, 108, 255, .2); --img: brightness(.86);
   color-scheme: dark;
 }
-html.dim {
-  --bg: #14110D; --bg2: #191510; --surface: #1E1913; --surface2: #251F17; --line: #342B1F;
-  --text: #EBDFCB; --soft: #BFAF94; --faint: #A39378;
-  --accent: #E9AE66; --fill: #9A5E23; --fill-h: #A9692A; --green: #D6C27A; --green-bg: rgba(214, 194, 122, .14);
-  --glow: rgba(233, 174, 102, .14); --img: brightness(.8) sepia(.18) saturate(.85);
+html[data-light="warm"] {
+  --bg: #F0E7D8; --bg2: #FAF4E9; --surface: #FAF4E9; --surface2: #E9DDC8; --line: #E1D3BC;
+  --text: #3A2F24; --soft: #65543F; --faint: #8A7860;
+  --accent: #A35A15; --fill: #A35A15; --fill-h: #8C4C10; --green: #58641F; --green-bg: #E6E2C4;
+  --glow: rgba(163, 90, 21, .08); --img: sepia(.22) saturate(.88) brightness(.97);
 }
+/* the logo in the bar: dark words on Light and Warm, white words on Dim */
+.nh-logo .lg-d { display: none; }
+html[data-light="dim"] .nh-logo .lg-d { display: block; }
+html[data-light="dim"] .nh-logo .lg-l { display: none; }
+/* the "Example" label on the sponsored slot: readable on light paper too */
+html:not([data-light="dim"]) .sp-ex { background: rgba(234, 88, 12, .1) !important; color: #C2410C !important; }
 @media (max-width: 720px) { :root { --hdr: 64px; } }
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; scroll-padding-top: calc(var(--hdr) + 70px); background: var(--bg); }

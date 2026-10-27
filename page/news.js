@@ -1,496 +1,492 @@
-// Paiir News: the page. Reads news.json (written every hour by fetch-news.mjs).
-// Phones (owner: "like the Inshorts app"): one story per screen, swipe up for the next; each card has the picture, a
-// short summary, "Read the story" and share. Computers: the top story, then the latest as
-// an easy-to-read list, with a side panel about Paiir. Both: "From Paiir" cards between stories, topic chips, readers'
-// own topics ("For you", saved on their device), Dim light, and sharing. Every story opens its own Paiir page
-// (/news/s/<id>, owner: "our own news page instead of redirecting to the source"), which links on to the publisher for
-// the full story; that page is also the shared link, so its preview shows the story's picture. Everything from
-// the feeds is untrusted: it goes in with textContent, and only http/https links and images are used.
+// Paiir News: the reader (owner, 2026-10-26: "make it a separate page ... in phone also people can use it like the
+// Inshorts app, just swipe up to read news, and to know more they can swipe left or right ... filter, screen colour
+// like dim, warm ... placement matters a lot ... very calm and easy to use").
+// One story at a time. Swipe up (or scroll, the arrow keys, the buttons) for the next story: the one on top lifts away
+// and the next waits underneath; swipe down and the one before slides back. Swipe LEFT, as in Inshorts, and the full
+// story slides in from the right; swipe it back (or Back, Esc, the phone's back button) to return. Swipe RIGHT and
+// Discover slides in from the left, as Inshorts opens its Discover: the topics. Both also have a button that says what
+// it does: Read the full story on every card, the topic in the bar. The reading light (Light, Dim, Warm) is ONLY the
+// button in the top bar (owner, 2026-10-27: "avoid making it two time"). On computers the topics sit in a rail beside
+// the story, and the full story opens at the side. No counts anywhere: no story numbers, no "1 / 184", no number of
+// sources (owner, 2026-10-27: "it feels very less content ... remove number").
+// Stories come from news.json (fetch-news.mjs, every hour); the full story is the publisher's longer feed text from the
+// story's own page (s/<id>), never the article itself, with a link to read it all at the publisher. A Paiir card after
+// every 8 stories, an end card, and a one-time hint on how to read. Feed text is untrusted: it is always escaped, and
+// only http/https links and pictures are used.
 (function () {
   'use strict';
-  var NS = 'http://www.w3.org/2000/svg';
-  // Lucide icons (ISC licence), outline, stroke 1.75
+  var PATH = '{{PATH}}', NEWS = '{{BASE}}/', HOME = '{{HOME}}', MAIL = 'contact@paiir.in';
+  var LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname), APP = LOCAL ? 'http://localhost:3000' : 'https://app.paiir.in';
+  // Lucide icons (ISC licence)
   var ICONS = {
-    share: '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/>',
-    link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
-    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
-    bridge: '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
-    rocket: '<path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>',
+    chev: '<path d="m6 9 6 6 6-6"/>',
+    chevL: '<path d="m15 18-6-6 6-6"/>',
     arrow: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
-    up: '<path d="m18 15-6-6-6 6"/>',
+    share: '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/>',
+    book: '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
     ext: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+    moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+    sunset: '<path d="M12 10V2"/><path d="m4.93 10.93 1.41 1.41"/><path d="M2 18h2"/><path d="M20 18h2"/><path d="m19.07 10.93-1.41 1.41"/><path d="M22 22H2"/><path d="m16 6-4 4-4-4"/><path d="M16 18a4 4 0 0 0-8 0"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    ccheck: '<path d="M21.8 10A10 10 0 1 1 17 3.34"/><path d="m9 11 3 3L22 4"/>',
+    refresh: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
+    news: '<path d="M15 18h-5"/><path d="M18 14h-8"/><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="10" y="6" rx="1"/>',
+    gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/>',
+    wallet: '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
+    people: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    cal: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>',
+    brief: '<path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/>',
+    megaphone: '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
+    home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+    bridge: '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
     chat: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
     linkedin: '<path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/>',
     send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
     copy: '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
-    refresh: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
-    sliders: '<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>',
-    check: '<path d="M20 6 9 17l-5-5"/>',
-    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
-    cpu: '<rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/>',
-    trend: '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
-    palette: '<circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>',
-    phone: '<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>',
-    grid: '<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
-    shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
-    flask: '<path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/>',
-    pulse: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/>',
-    heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
-    pin: '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>'
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'
   };
-  var TOPICS = [['AI', 'cpu'], ['Startups', 'rocket'], ['Economy', 'trend'], ['Design', 'palette'], ['Gadgets', 'phone'], ['Apps', 'grid'], ['Security', 'shield'], ['Science', 'flask'], ['Health', 'pulse'], ['Sex education', 'heart'], ['India', 'pin']];
-  ICONS.megaphone = '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>';
-  ICONS.cal = '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>';
-  ICONS.play = '<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>';
-  ICONS.file = '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>';
-  ICONS.clock = '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>';
-  ICONS.moon = '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>';
-  ICONS.badge = '<path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/>';
-  ICONS.user = '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>';
-  ICONS.image = '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>';
-  var STEP = 20, NEWS = '{{BASE}}/', HOME = '{{HOME}}', KEY = 'paiir-news-topics', MAIL = 'contact@paiir.in';
-  // what Paiir does, between the stories (in turn)
-  var PROMOS = [
-    ['link', 'Know something people keep asking you about?', 'Sell it from one link: 1:1 calls, courses, templates and paid questions. Free to start, and you keep 93% of every sale.', 'Start selling on Paiir', '#products'],
-    ['rocket', 'Building a startup in India?', 'Founder Hub lists the grants, government schemes and accelerators you can apply to today. Free, and each one links straight to apply.', 'Browse Founder Hub', '#founder-hub'],
-    ['users', 'Stuck on something? Talk to someone who has done it.', 'Find a mentor is coming soon to Paiir. Verified experts, and you pay only when you book.', 'Get notified', '#experts'],
-    ['bridge', 'Meet mentors and investors in one go.', 'Paiir Bridge takes a small batch of startups and gives each one a Founder Passport. Early access is open.', 'Apply for early access', '#bridge']
-  ];
-  var EXPLORE = [
-    ['link', 'Paiir Connect', 'Coming soon', 'Sell what you know from one link: 1:1 calls, live sessions, courses and paid questions. Free to start, 7% only when you sell.', '#products', 'See how it works'],
-    ['users', 'Find a mentor', 'Coming soon', 'Book someone who has done what you’re trying to do. Verified experts, and you pay only when you book.', '#experts', 'Get notified'],
-    ['bridge', 'Paiir Bridge', 'Early access', 'Where startups meet verified mentors, investors and corporates. Scout does the matching.', '#bridge', 'Apply early'],
-    ['rocket', 'Founder Hub', 'Free', 'Grants, government schemes, incubators and funding calls for Indian startups, all in one place.', '#founder-hub', 'Browse programs']
-  ];
-  var $ = function (id) { return document.getElementById(id); };
-  var feed = $('feed'), more = $('more'), moreBtn = $('moreBtn'), chips = $('chips'), updated = $('updated'), toastEl = $('toast'), pager = $('pager');
-  var phone = window.matchMedia ? matchMedia('(max-width: 720px)') : { matches: false };
-  var ask = new URLSearchParams(location.search), shared = ask.get('s');
-  var S = { data: null, cat: 'All', n: STEP, list: [], rows: 0, promos: 0, picks: load() };
-
-  function load() { try { var v = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(v) ? v.filter(function (t) { return TOPICS.some(function (x) { return x[0] === t; }); }) : []; } catch (e) { return []; } }
-  function save(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} }
-  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
-  function icon(n) { var s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); s.innerHTML = ICONS[n]; return s; }
-  function ic(n) { var w = el('span', 'ic'); w.appendChild(icon(n)); return w; }
+  function ic(n, cls) { return '<svg class="ico' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + ICONS[n] + '</svg>'; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function safe(u) { try { var x = new URL(u); return x.protocol === 'https:' || x.protocol === 'http:' ? x.href : ''; } catch (e) { return ''; } }
-  function domain(d) { return String(d || '').toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split(/[\/?#:]/)[0].replace(/[^a-z0-9.-]/g, ''); }
-  function ago(iso) {
-    var t = Date.parse(iso); if (!isFinite(t)) return '';
-    var m = Math.max(0, Math.round((Date.now() - t) / 60000));
-    if (m < 1) return 'just now'; if (m < 60) return m + ' min ago';
-    var h = Math.round(m / 60); if (h < 24) return h + 'h ago';
-    var d = Math.round(h / 24); if (d < 7) return d + 'd ago';
-    return new Date(t).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-  }
-  function letter(name, cls) { var p = el('span', 'ph' + (cls ? ' ' + cls : ''), (String(name || 'P').trim()[0] || 'P').toUpperCase()); p.setAttribute('aria-hidden', 'true'); return p; }
-  function picture(src, name, eager) {
-    var u = safe(src); if (!u) return letter(name);
-    var img = el('img'); img.alt = ''; img.loading = eager ? 'eager' : 'lazy'; img.decoding = 'async'; img.referrerPolicy = 'no-referrer'; img.src = u;
-    img.addEventListener('error', function () { img.replaceWith(letter(name)); });
-    return img;
-  }
-  function favicon(name, d) {
-    d = domain(d); if (!d) return letter(name, 'fav');
-    var f = el('img', 'fav'); f.alt = ''; f.width = 20; f.height = 20; f.loading = 'lazy'; f.referrerPolicy = 'no-referrer'; f.src = 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(d) + '&sz=64';
-    f.addEventListener('error', function () { f.replaceWith(letter(name, 'fav')); }); return f;
-  }
-  function srcRow(s) {
-    var row = el('div', 'src'); row.appendChild(favicon(s.source, s.domain)); row.appendChild(el('b', '', s.source));
-    var t = el('time', '', ago(s.published)); t.dateTime = s.published || ''; row.appendChild(el('span', '', '·')); row.appendChild(t);
-    if (s.category && s.category !== 'Tech') { row.appendChild(el('span', 'cat-sep', '·')); row.appendChild(el('span', 'cat', s.category)); }
-    return row;
-  }
-  function shareBtn(s, cls) {
-    var b = el('button', cls || 'share'); b.type = 'button'; b.setAttribute('aria-label', 'Share: ' + s.title); b.setAttribute('aria-haspopup', 'menu'); b.setAttribute('aria-expanded', 'false'); b.appendChild(icon('share'));
-    b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); share(s, b); }); return b;
-  }
-  function out(a, s) { a.href = '{{PATH}}s/' + encodeURIComponent(s.id); }
+  function $(id) { return document.getElementById(id); }
+  function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+  var root = document.documentElement, deck = $('deck');
+  var R = { data: null, cat: '', items: [], i: 0, busy: 0, total: 0, body: {}, open: '', dragged: false, wheel: { until: 0, step: 0 } };
+  var ask = new URLSearchParams(location.search), shared = ask.get('s');
+  var wide = window.matchMedia ? matchMedia('(min-width: 1000px)') : { matches: true };
+  var touch = window.matchMedia ? matchMedia('(pointer: coarse)') : { matches: false };
 
-  // which stories: a topic chip, all of them, or "For you" (the reader's own topics). A shared story comes first.
-  function inTopic(s, t) { return s.category === t || (s.tags || []).indexOf(t) > -1; }
-  function filtered() {
-    var all = (S.data && S.data.stories) || [], c = S.cat, list;
-    if (c === 'All') list = all.slice();
-    else if (c === 'For you') list = all.filter(function (s) { return S.picks.some(function (t) { return inTopic(s, t); }); });
-    else list = all.filter(function (s) { return inTopic(s, c); });
-    if (shared) { var x = all.filter(function (s) { return s.id === shared; })[0]; if (x) list = [x].concat(list.filter(function (s) { return s !== x; })); }
-    return list;
+  function age(d) {
+    var m = Math.max(0, Math.round((Date.now() - Date.parse(d)) / 60000)); if (!isFinite(m)) return '';
+    return m < 60 ? (m < 2 ? 'Just now' : m + ' min ago') : m < 1440 ? Math.round(m / 60) + (Math.round(m / 60) === 1 ? ' hour ago' : ' hours ago') : Math.round(m / 1440) === 1 ? 'Yesterday' : Math.round(m / 1440) + ' days ago';
+  }
+  // pictures come resized through wsrv.nl (free, no key; it loads pictures some publishers refuse to other sites, and
+  // sends a smaller one), then the publisher's own if that fails, then the card without a picture
+  function pic(s, cls) {
+    var u = safe(s.image); if (!u) return '';
+    return '<img class="' + cls + '" src="https://wsrv.nl/?url=' + encodeURIComponent(u) + '&amp;w=1000&amp;output=webp" data-o="' + esc(u) + '" alt="" decoding="async" referrerpolicy="no-referrer">';
+  }
+  document.addEventListener('error', function (e) {
+    var im = e.target; if (!im || im.tagName !== 'IMG' || !im.closest('.c,.full-p')) return;
+    var o = im.getAttribute('data-o'); if (o) { im.removeAttribute('data-o'); im.src = o; return; }
+    var c = im.closest('.c'); if (c) c.classList.add('no-img');
+    var f = im.closest('.full-pic'); if (f) f.remove(); else im.remove();
+  }, true);
+
+  // ---- the reading light: Light, Dim (soft dark, for night), Warm (paper tones, less blue light)
+  var LIGHTS = [['light', 'Light', 'Bright and clear, for the day', 'sun'], ['dim', 'Dim', 'Soft and dark, for the night', 'moon'], ['warm', 'Warm', 'Less blue light, kind to tired eyes', 'sunset']];
+  var THEME = { light: '#F3F4F6', dim: '#0F1115', warm: '#F0E7D8' };
+  function lightNow() { var l = root.getAttribute('data-light'); return THEME[l] ? l : 'light'; }
+  function lightOf(k) { return LIGHTS.filter(function (x) { return x[0] === k; })[0] || LIGHTS[0]; }
+  function setLight(k, say) {
+    root.setAttribute('data-light', k); store('paiir-news-light', k);
+    var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = THEME[k];
+    drawLight(); if (say) toast(lightOf(k)[1] + ' light. ' + lightOf(k)[2]);
+  }
+  function drawLight() {
+    var L = lightOf(lightNow()), b = $('lightBtn');
+    b.innerHTML = ic(L[3]); b.setAttribute('aria-label', 'Reading light: ' + L[1] + '. Change it');
+    $$('[data-light-set]').forEach(function (x) { x.setAttribute('aria-pressed', x.getAttribute('data-light-set') === L[0] ? 'true' : 'false'); });
+  }
+  // the bar's light button: a small menu of the three, each with a line on what it's for
+  var pop = null;
+  function closePop() { if (!pop) return; pop.remove(); pop = null; $('lightBtn').setAttribute('aria-expanded', 'false'); document.removeEventListener('pointerdown', popOut, true); }
+  function popOut(e) { if (pop && !pop.contains(e.target) && !$('lightBtn').contains(e.target)) closePop(); }
+  function openPop() {
+    if (pop) return closePop();
+    var b = $('lightBtn'); pop = document.createElement('div'); pop.className = 'pop'; pop.setAttribute('role', 'menu'); pop.setAttribute('aria-label', 'Reading light');
+    pop.innerHTML = '<p class="pop-h">Reading light</p>' + LIGHTS.map(function (L) {
+      return '<button type="button" role="menuitemradio" data-light-set="' + L[0] + '"><span class="sw-c sw-' + L[0] + '">' + ic(L[3]) + '</span><span><b>' + L[1] + '</b><small>' + L[2] + '</small></span>' + ic('check', 'ck') + '</button>';
+    }).join('');
+    document.body.appendChild(pop);
+    var r = b.getBoundingClientRect();
+    pop.style.top = (r.bottom + 10) + 'px'; pop.style.left = Math.max(12, Math.min(r.right - pop.offsetWidth, innerWidth - pop.offsetWidth - 12)) + 'px';
+    drawLight(); b.setAttribute('aria-expanded', 'true');
+    requestAnimationFrame(function () { if (pop) pop.classList.add('on'); });
+    document.addEventListener('pointerdown', popOut, true);
+    var on = pop.querySelector('[aria-pressed="true"]'); if (on) on.focus();
   }
 
-  // ---- computers: the top story, then the list ----
-  function lead(s, label) {
-    var art = el('article', 'lead'), a = el('a', 'lead-a'); out(a, s);
-    var im = el('div', 'lead-img'); im.appendChild(picture(s.image, s.source, true)); im.appendChild(el('span', 'lead-k' + (label ? ' lead-k-shared' : ''), label || 'Top story')); a.appendChild(im);
-    var b = el('div', 'lead-b'); b.appendChild(srcRow(s)); b.appendChild(el('h2', 'lead-t', s.title)); if (s.summary || s.snippet) b.appendChild(el('p', 'lead-p', s.summary || s.snippet)); a.appendChild(b);
-    art.appendChild(a); art.appendChild(shareBtn(s)); return art;
+  // ---- the panel: the topics and what Paiir News is (in Discover on phones, in the rail on computers)
+  function panelHtml() {
+    return '<div class="grp"><p class="grp-h">Topics <small data-upd></small></p><div class="tps" data-tps role="group" aria-label="Topics">' + topicsHtml() + '</div></div>' +
+      '<div class="grp grp-ft"><p class="about">Startup and tech news from trusted sources, updated every hour. Every story links to where it came from.</p><div class="links">' +
+      '<a href="' + esc(HOME) + '">' + ic('home') + 'Explore paiir.in</a>' +
+      '<a href="' + esc(HOME) + '#grants">' + ic('gift') + 'Grants for startups</a>' +
+      '<a href="' + esc(HOME) + '#bridge">' + ic('bridge') + 'Paiir Bridge</a>' +
+      '<button type="button" data-adv>' + ic('megaphone') + 'Advertise with us</button></div></div>';
   }
-  function row(s) {
-    var art = el('article', 'row'), a = el('a', 'row-a'); out(a, s);
-    var b = el('div', 'row-b'); b.appendChild(srcRow(s)); b.appendChild(el('h3', 'row-t', s.title)); if (s.snippet) b.appendChild(el('p', 'row-p', s.snippet)); a.appendChild(b);
-    // a story without a picture (or whose picture fails) gives its words the full width
-    var u = safe(s.image);
-    if (u) {
-      var im = el('div', 'row-img'), img = el('img'); img.alt = ''; img.loading = 'lazy'; img.decoding = 'async'; img.referrerPolicy = 'no-referrer'; img.src = u;
-      img.addEventListener('error', function () { im.remove(); art.classList.add('noimg'); });
-      im.appendChild(img); a.appendChild(im);
-    } else art.classList.add('noimg');
-    art.appendChild(a); art.appendChild(shareBtn(s)); return art;
+  function cats() {
+    var c = {}; ((R.data && R.data.stories) || []).forEach(function (s) { if (s.category && (s.summary || s.snippet)) c[s.category] = (c[s.category] || 0) + 1; });
+    return Object.keys(c).sort(function (a, b) { return c[b] - c[a]; }).map(function (k) { return [k, c[k]]; });
   }
-  // ---- pictures for Paiir's own cards: small scenes drawn in the page, so they stay crisp and follow Dim light ----
-  function h(tag, cls, kids) { var e = el(tag, cls); (kids || []).forEach(function (k) { if (k) e.appendChild(typeof k === 'string' ? document.createTextNode(k) : k); }); return e; }
-  function ico(n, cls) { var w = el('span', cls || 'pa-i'); w.appendChild(icon(n)); return w; }
-  var ART = {
-    link: function () {
-      var r = function (i, t, sub, pr) { return h('div', 'pa-row', [ico(i), h('span', 'pa-rt', [h('b', '', [t]), h('small', '', [sub])]), h('b', 'pa-pr', [pr])]); };
-      return h('div', 'pa-scene pa-sell', [
-        h('div', 'pa-card pa-page', [h('span', 'pa-url', ['paiir.in/', h('b', '', ['you'])]), r('cal', '1:1 call', '45 min', '₹1,499'), r('play', 'Video course', '12 lessons', '₹2,999'), r('file', 'Template kit', 'PDF', '₹799')]),
-        h('div', 'pa-card pa-toast', [ico('check', 'pa-ok'), h('span', '', [h('b', '', ['New booking']), h('small', '', ['Paid by UPI'])])]),
-        h('span', 'pa-chip pa-green', ['You keep 93%'])]);
-    },
-    rocket: function () {
-      var c = function (cls, tag, t, sub) { return h('div', 'pa-card pa-prog ' + cls, [h('span', 'pa-tag', [tag]), h('b', '', [t]), h('small', '', [sub])]); };
-      return h('div', 'pa-scene pa-hub', [c('p3', 'Credits', 'Cloud credits', 'For your stack'), c('p2', 'Scheme', 'State startup policy', 'Support and rebates'), c('p1', 'Grant', 'Seed fund for startups', 'Up to ₹50 lakh'),
-        h('span', 'pa-chip pa-warm', [ico('clock', 'pa-ci'), 'Closes in 12 days'])]);
-    },
-    users: function () {
-      return h('div', 'pa-scene pa-mentor', [
-        h('span', 'pa-av a1', [ico('user', 'pa-ai')]), h('span', 'pa-av a2', [ico('user', 'pa-ai')]), h('span', 'pa-av a3', [ico('user', 'pa-ai')]),
-        h('div', 'pa-card pa-book', [h('div', 'pa-who', [h('span', 'pa-av pa-me', [ico('user', 'pa-ai')]), h('span', '', [h('b', '', ['Talk to someone who’s done it']), h('small', '', [ico('badge', 'pa-vi'), 'Verified mentor'])])]),
-          h('div', 'pa-slots', [h('span', '', ['Mon 10:00']), h('span', 'on', ['Tue 18:30']), h('span', '', ['Thu 12:00'])]), h('span', 'pa-btn', ['Book a call'])]),
-        h('span', 'pa-chip', ['Coming soon'])]);
-    },
-    bridge: function () {
-      return h('div', 'pa-scene pa-bridge', [
-        h('div', 'pa-pass', [h('div', 'pa-ph', [h('span', '', ['Paiir · Founder Passport']), h('i', '', [])]), h('b', 'pa-pn', ['Your startup']),
-          h('div', 'pa-pf', [h('span', '', [h('small', '', ['Stage']), h('b', '', ['Seed'])]), h('span', '', [h('small', '', ['Sector']), h('b', '', ['SaaS'])]), h('span', '', [h('small', '', ['Batch']), h('b', '', ['01'])])]),
-          h('span', 'pa-ver', [ico('badge', 'pa-vi'), 'Verified by Paiir'])]),
-        h('div', 'pa-card pa-ring', [ico('check', 'pa-ri'), h('small', '', ['Strong fit'])])]);
-    },
-    topics: function () {
-      return h('div', 'pa-scene pa-topics', [h('div', 'pa-cloud', [['AI', 1], ['Design', 1], ['Economy', 0], ['Startups', 0], ['Health', 1], ['Science', 0], ['Sex education', 0], ['India', 1]].map(function (t) { return h('span', 'pa-tp' + (t[1] ? ' on' : ''), [t[1] ? ico('check', 'pa-tc') : null, t[0]]); }))]);
-    },
-    ad: function () { var w = h('div', 'pa-scene pa-adw', [adSample()]); return w; },
-    end: function () {
-      return h('div', 'pa-scene pa-end', [h('span', 'pa-star s1'), h('span', 'pa-star s2'), h('span', 'pa-star s3'), h('span', 'pa-star s4'), h('span', 'pa-moon', [ico('moon', 'pa-mi')]),
-        h('span', 'pa-chip', [ico('clock', 'pa-ci'), 'Fresh stories every hour'])]);
+  function topicsHtml() { // the busiest topics first, without their counts
+    return [['']].concat(cats()).map(function (t) {
+      return '<button type="button" class="tp" data-cat="' + esc(t[0]) + '" aria-pressed="' + (R.cat === t[0]) + '">' + (t[0] ? esc(t[0]) : 'All news') + '</button>';
+    }).join('');
+  }
+  function drawPanels() {
+    var rail = $('rail'), disc = $('discBody');
+    if (rail) rail.innerHTML = panelHtml();
+    if (disc) disc.innerHTML = panelHtml();
+    drawLight(); drawUpdated();
+    $('topicName').textContent = R.cat || 'All news';
+  }
+  function drawUpdated() {
+    var t = R.data && R.data.updated ? 'Updated ' + age(R.data.updated).toLowerCase() : 'Every hour';
+    $('upd').textContent = t; $$('[data-upd]').forEach(function (x) { x.textContent = t; });
+  }
+  setInterval(drawUpdated, 60000);
+
+  // ---- the stories, and Paiir's own cards between them (no prices: the owner's fee rule)
+  var PROMOS = [
+    { ic: 'gift', k: 'Founder Hub', t: 'Grants that fit your startup', p: 'Government schemes, accelerators and credits, researched by Paiir and kept up to date.', b: 'Find grants', h: HOME + '#grants' },
+    { ic: 'wallet', k: 'Paiir Connect', t: 'Earn from what you know', p: 'Your own page at paiir.in/yourname. Sell calls, sessions and downloads, and get paid by UPI.', b: 'Claim your free link', h: HOME + '#signup' },
+    { ic: 'people', k: 'Founder Hub', t: 'Find your co-founder', p: 'Meet founders matched on skills, city and stage. Making your profile is free.', b: 'Find a co-founder', h: APP + '/cofounders' },
+    { ic: 'cal', k: 'Founder Hub', t: 'Startup events across India', p: 'Summits, demo days and program deadlines, month by month.', b: 'See the events', h: HOME + '#events' },
+    { ic: 'brief', k: 'Startup Jobs', t: 'Work at a startup', p: 'Open roles at startups in India, straight from their careers pages.', b: 'See startup jobs', h: HOME + '#jobs' },
+    { ic: 'megaphone', k: 'Example placement', ad: 1, t: 'Your brand, here', p: 'Reach founders and builders who read Paiir News every day. Always marked as sponsored.', b: 'Advertise with us' }
+  ];
+  function inCat(s) { return !R.cat || s.category === R.cat || (s.tags || []).indexOf(R.cat) > -1; }
+  function buildItems() {
+    var list = ((R.data && R.data.stories) || []).filter(function (s) { return (s.summary || s.snippet) && s.title && inCat(s); });
+    if (shared) { var x = list.filter(function (s) { return s.id === shared; })[0]; if (x) list = [x].concat(list.filter(function (s) { return s !== x; })); }
+    var out = [], n = 0;
+    list.forEach(function (s) { out.push({ s: s, n: ++n }); if (n % 8 === 0) out.push({ p: PROMOS[(n / 8 - 1) % PROMOS.length] }); });
+    R.total = n; out.push({ end: 1 });
+    return out;
+  }
+  function slide(it) {
+    if (it.s) {
+      var s = it.s, im = pic(s, 'c-img');
+      return '<article class="c' + (im ? '' : ' no-img') + '" aria-label="' + esc(s.title) + '"><span class="c-pic">' + im + '<span class="c-src">' + esc(s.source) + '</span>' + (shared && s.id === shared && it.n === 1 ? '<span class="c-flag">Shared with you</span>' : '') + '</span>' +
+        '<div class="c-body"><p class="c-k"><b>' + esc(s.category || 'News') + '</b><span>' + esc(age(s.published)) + '</span></p>' +
+        '<h2 class="c-h"><button type="button" data-full>' + esc(s.title) + '</button></h2><p class="c-sum">' + esc(s.summary || s.snippet) + '</p></div>' +
+        '<div class="c-ft"><button type="button" class="c-more" data-full>' + ic('book') + '<span>Read the full story</span><span class="sw" aria-hidden="true">' + ic('chevL') + ic('chevL') + '</span>' + ic('arrow', 'ar') + '</button>' +
+        '<button type="button" class="ib" data-share aria-label="Share this story">' + ic('share') + '</button></div></article>';
     }
-  };
-  function art(key) { var w = el('div', 'pa-art'); w.setAttribute('aria-hidden', 'true'); w.appendChild(ART[key]()); return w; }
-  function fromPaiir(label) { var r = el('div', 'src'), m = el('img', 'fav'); m.src = '{{PATH}}brand/paiir-mark.svg'; m.alt = ''; r.appendChild(m); r.appendChild(el('b', '', 'Paiir')); r.appendChild(el('span', '', '·')); r.appendChild(el('span', 'cat', label || 'From Paiir')); return r; }
-  // on computers, between the stories: the picture as a banner, then the words
-  function promo(i) {
-    var p = PROMOS[i % PROMOS.length], a = el('a', 'promo promo-v'); a.href = HOME + p[4];
-    a.appendChild(art(p[0]));
-    var t = el('div', 'promo-b'); t.appendChild(fromPaiir()); t.appendChild(el('b', '', p[1])); t.appendChild(el('p', '', p[2]));
-    var go = el('span', 'go', p[3]); go.appendChild(icon('arrow')); t.appendChild(go); a.appendChild(t);
-    return a;
-  }
-  function addRows(from, to) {
-    S.list.slice(from, to).forEach(function (s) {
-      feed.appendChild(row(s)); S.rows++;
-      if (S.rows === 5 || (S.rows > 5 && (S.rows - 5) % 7 === 0)) feed.appendChild(promo(S.promos++));
-    });
-  }
-  function renderList() {
-    S.rows = 0; S.promos = 0; feed.textContent = ''; feed.setAttribute('aria-busy', 'false');
-    if (!S.list.length) { feed.appendChild(empty()); more.hidden = true; return; }
-    var first = S.list[0], isShared = shared && first.id === shared;
-    feed.appendChild(lead(first, isShared ? 'Shared with you' : ''));
-    if (S.list.length > 1) feed.appendChild(el('h2', 'sec-h', S.cat === 'All' ? 'Latest' : S.cat === 'For you' ? 'For you' : 'Latest in ' + S.cat));
-    addRows(1, Math.min(S.n, S.list.length));
-    more.hidden = S.n >= S.list.length;
-  }
-  function loadMore() { if (phone.matches || !S.list.length || S.n >= S.list.length) return; var from = S.n; S.n += STEP; addRows(from, Math.min(S.n, S.list.length)); more.hidden = S.n >= S.list.length; }
-  moreBtn.addEventListener('click', loadMore);
-  if ('IntersectionObserver' in window) new IntersectionObserver(function (es) { if (es[0].isIntersecting && S.data) loadMore(); }, { rootMargin: '400px 0px' }).observe(more);
-
-  // ---- phones: one story per screen, swipe up for the next ----
-  function card(s, i) {
-    var c = el('article', 'pc'); c.setAttribute('aria-label', s.title);
-    var im = el('div', 'pc-img'); im.appendChild(picture(s.image, s.source, i < 2));
-    if (shared && s.id === shared && i === 0) im.appendChild(el('span', 'pc-flag', 'Shared with you'));
-    c.appendChild(im);
-    var b = el('div', 'pc-b'); b.appendChild(srcRow(s)); b.appendChild(el('h2', 'pc-t', s.title));
-    b.appendChild(el('p', 'pc-s', s.summary || s.snippet || ''));
-    var f = el('div', 'pc-foot'), rm = el('a', 'pc-more'); out(rm, s);
-    rm.appendChild(el('span', '', 'Read the story')); rm.appendChild(icon('arrow')); f.appendChild(rm);
-    f.appendChild(shareBtn(s, 'pc-share')); b.appendChild(f); c.appendChild(b);
-    if (i === 0) { var h = el('span', 'pc-hint'); h.appendChild(icon('up')); h.appendChild(document.createTextNode('Swipe up for the next story')); im.appendChild(h); }
-    return c;
-  }
-  // on phones, Paiir's own cards are shaped like a story: the picture on top, then the words and the button
-  function paiirCard(key, label, title, text, action) {
-    var c = el('article', 'pc pc-promo'); c.setAttribute('aria-label', title);
-    var im = el('div', 'pc-img'); im.appendChild(art(key)); c.appendChild(im);
-    var b = el('div', 'pc-b'); b.appendChild(fromPaiir(label)); b.appendChild(el('h2', 'pc-t', title)); b.appendChild(el('p', 'pc-s', text));
-    var f = el('div', 'pc-foot'); action.forEach(function (x) { f.appendChild(x); }); b.appendChild(f); c.appendChild(b);
-    return c;
-  }
-  function goLink(label, href) { var a = el('a', 'pc-go', label); a.href = href; a.appendChild(icon('arrow')); return a; }
-  function goBtn(label, fn, cls) { var b = el('button', cls || 'pc-go', label); b.type = 'button'; b.addEventListener('click', fn); if (!cls) b.appendChild(icon('arrow')); return b; }
-  function promoCard(i) { var p = PROMOS[i % PROMOS.length]; return paiirCard(p[0], 'From Paiir', p[1], p[2], [goLink(p[3], HOME + p[4])]); }
-  function topicsCard() {
-    return paiirCard('topics', 'Your topics', 'Read what you care about.', 'Pick your topics, from AI and design to the economy and your health, and we’ll keep you updated every hour. Reading late? The moon button up top turns on Dim light.', [goBtn('Choose my topics', openPicker)]);
-  }
-  // ---- advertise with us: an example of a sponsored story, and a short form that reaches the Paiir team ----
-  function adSample() {
-    var w = el('div', 'ad-sample'); w.setAttribute('aria-hidden', 'true');
-    var t = el('div', 'ad-sb'), src = el('div', 'src'), logo = el('span', 'fav ad-logo', 'B'); src.appendChild(logo); src.appendChild(el('b', '', 'Your brand')); src.appendChild(el('span', 'ad-tag', 'Sponsored'));
-    t.appendChild(src); t.appendChild(el('b', 'ad-st', 'Your story, told in your words')); t.appendChild(el('span', 'ad-go', 'Learn more'));
-    var im = el('div', 'ad-img'); im.appendChild(icon('image')); w.appendChild(t); w.appendChild(im);
-    return w;
-  }
-  function adBlock(cls) {
-    var c = el('div', cls), k = el('span', 'promo-k'); k.appendChild(el('i')); k.appendChild(document.createTextNode('For brands')); c.appendChild(k);
-    c.appendChild(el('b', 'ad-h', 'Advertise on Paiir News'));
-    c.appendChild(el('p', 'ad-p', 'Reach readers who choose what they read: founders, builders and curious minds. Your story sits in the feed like this, clearly marked as sponsored.'));
-    var lab = el('span', 'ad-lab', 'Example placement'); c.appendChild(lab); c.appendChild(adSample());
-    var b = el('button', 'btn btn-pri', 'Advertise with us'); b.type = 'button'; b.appendChild(icon('arrow')); b.addEventListener('click', openAdvertise); c.appendChild(b);
-    return c;
-  }
-  function adCard() { return paiirCard('ad', 'For brands', 'Advertise on Paiir News', 'Reach readers who choose what they read: founders, builders and curious minds. Your story sits in the feed like the one above, clearly marked as sponsored.', [goBtn('Advertise with us', openAdvertise)]); }
-  function field(label, input) { var l = el('label', 'af'); l.appendChild(el('span', 'af-l', label)); l.appendChild(input); return l; }
-  function openAdvertise() {
-    if (sheet) return;
-    var back = document.activeElement;
-    sheet = el('div', 'sheet-wrap');
-    var box = el('div', 'sheet'); box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-labelledby', 'adH');
-    var head = el('div', 'sheet-h'), h = el('h2', '', 'Advertise on Paiir News'); h.id = 'adH'; head.appendChild(h);
-    var x = el('button', 'sheet-x'); x.type = 'button'; x.setAttribute('aria-label', 'Close'); x.appendChild(icon('x')); head.appendChild(x); box.appendChild(head);
-    box.appendChild(el('p', 'sheet-p', 'Tell us a little about what you’d like to promote. The Paiir team replies within 2 working days with the options that fit.'));
-    var f = el('form', 'af-form'); f.noValidate = true;
-    var name = el('input'); name.name = 'name'; name.autocomplete = 'name'; name.maxLength = 120; name.placeholder = 'Your name';
-    var email = el('input'); email.name = 'email'; email.type = 'email'; email.autocomplete = 'email'; email.required = true; email.placeholder = 'you@company.com';
-    var co = el('input'); co.name = 'company'; co.autocomplete = 'organization'; co.maxLength = 120; co.placeholder = 'Company or brand';
-    var msg = el('textarea'); msg.name = 'message'; msg.rows = 3; msg.maxLength = 1000; msg.placeholder = 'A product, an event, a hiring drive…';
-    var hp = el('input'); hp.name = 'website'; hp.tabIndex = -1; hp.autocomplete = 'off'; hp.className = 'af-hp'; hp.setAttribute('aria-hidden', 'true');
-    var row = el('div', 'af-two'); row.appendChild(field('Your name', name)); row.appendChild(field('Work email', email)); f.appendChild(row);
-    f.appendChild(field('Company or brand', co)); f.appendChild(field('What would you like to promote?', msg)); f.appendChild(hp);
-    var err = el('p', 'af-err'); err.setAttribute('role', 'alert'); f.appendChild(err);
-    f.addEventListener('input', function () { err.textContent = ''; });
-    var go = el('button', 'btn btn-pri', 'Send to the Paiir team'); go.type = 'submit'; f.appendChild(go);
-    f.appendChild(el('small', 'af-note', 'Or write to ' + MAIL + '. We never share your details.'));
-    box.appendChild(f); sheet.appendChild(box); document.body.appendChild(sheet);
-    var close = function () { if (!sheet) return; sheet.remove(); sheet = null; document.removeEventListener('keydown', key, true); if (back && back.focus) back.focus(); };
-    var key = function (e) { if (e.key === 'Escape') { e.preventDefault(); close(); } else if (e.key === 'Tab') { var q = box.querySelectorAll('button, input:not(.af-hp), textarea'), a = q[0], z = q[q.length - 1]; if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); } else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); } } };
-    document.addEventListener('keydown', key, true);
-    sheet.addEventListener('click', function (e) { if (e.target === sheet) close(); });
-    x.addEventListener('click', close);
-    f.addEventListener('submit', function (e) {
-      e.preventDefault(); err.textContent = '';
-      var em = email.value.trim();
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { err.textContent = 'Please add an email we can reply to.'; email.focus(); return; }
-      go.disabled = true; go.textContent = 'Sending…';
-      fetch('/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'news-advertise', email: em, name: name.value.trim(), detail: co.value.trim(), data: { company: co.value.trim(), message: msg.value.trim(), from: 'Paiir News' }, page: location.pathname, website: hp.value }) })
-        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok || !j.ok) throw new Error('send'); }); })
-        .then(function () {
-          box.textContent = '';
-          var d = el('div', 'af-done'), i = ic('check'); d.appendChild(i); d.appendChild(el('h2', '', 'Thank you. We’ve got it.'));
-          d.appendChild(el('p', 'sheet-p', 'The Paiir team will write to ' + em + ' within 2 working days.'));
-          var ok = el('button', 'btn btn-sec', 'Back to the news'); ok.type = 'button'; ok.addEventListener('click', close); d.appendChild(ok);
-          box.appendChild(d); ok.focus();
-        })
-        .catch(function () { go.disabled = false; go.textContent = 'Send to the Paiir team'; err.textContent = 'We couldn’t send this just now. Please try again, or write to ' + MAIL + '.'; });
-    });
-    requestAnimationFrame(function () { sheet.classList.add('on'); name.focus(); });
-  }
-  function endCard() {
-    return paiirCard('end', 'All caught up', 'You’re all caught up.', 'We’ll have fresh stories for you within the hour, so take a break and rest your eyes. Meanwhile, see what else Paiir does.', [goLink('Explore paiir.in', HOME), goBtn('Back to the top', function () { pager.scrollTo({ top: 0, behavior: 'smooth' }); }, 'pc-back')]);
-  }
-  function renderCards() {
-    pager.textContent = '';
-    if (!S.list.length) { var c = el('article', 'pc pc-paiir'), w = el('div', 'pc-pin'); w.appendChild(empty()); c.appendChild(w); pager.appendChild(c); return; }
-    var n = 0, p = 0;
-    S.list.forEach(function (s, i) {
-      pager.appendChild(card(s, i)); n++;
-      if (n === 2 && !S.picks.length) pager.appendChild(topicsCard());
-      if (n === 6 || (n > 6 && (n - 6) % 8 === 0)) pager.appendChild(promoCard(p++));
-      if (n === 14) pager.appendChild(adCard());
-    });
-    pager.appendChild(endCard());
-    pager.scrollTop = 0;
-  }
-  if (pager) pager.addEventListener('scroll', function () { if (pager.scrollTop > 40) pager.classList.add('moved'); }, { passive: true });
-
-  function empty() {
-    var box = el('div', 'state'); box.appendChild(el('b', '', S.cat === 'For you' ? 'Nothing in your topics right now' : 'No ' + S.cat + ' stories right now'));
-    box.appendChild(el('p', '', 'New stories arrive every hour. Have a look at everything else meanwhile.'));
-    var b = el('button', 'btn btn-sec', 'Show all stories'); b.type = 'button'; b.addEventListener('click', function () { pick('All'); }); box.appendChild(b); return box;
-  }
-  function render() {
-    S.list = filtered();
-    document.body.classList.toggle('cards', !!phone.matches);
-    if (phone.matches) renderCards(); else renderList();
-  }
-  if (phone.addEventListener) phone.addEventListener('change', function () { if (S.data) render(); });
-
-  // ---- topic chips and the reader's own topics ----
-  function drawChips() {
-    chips.textContent = '';
-    var t = el('button', 'chip chip-topics'); t.type = 'button'; t.appendChild(icon('sliders')); t.appendChild(document.createTextNode(S.picks.length ? 'My topics' : 'Choose topics')); t.addEventListener('click', openPicker); chips.appendChild(t);
-    (S.picks.length ? ['For you', 'All'] : ['All']).concat(TOPICS.map(function (x) { return x[0]; })).forEach(function (c) {
-      var b = el('button', 'chip', c); b.type = 'button'; b.dataset.c = c; b.setAttribute('aria-pressed', c === S.cat ? 'true' : 'false'); b.addEventListener('click', function () { pick(c); }); chips.appendChild(b);
-    });
-  }
-  function pick(c) {
-    S.cat = c; S.n = STEP; drawChips(); render();
-    if (!phone.matches) { var top = feed.getBoundingClientRect().top - (chips.getBoundingClientRect().bottom + 16); if (top < 0) window.scrollBy(0, top); }
-    var on = chips.querySelector('[aria-pressed="true"]'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'center' });
-  }
-  var sheet = null;
-  function openPicker() {
-    if (sheet) return;
-    var back = document.activeElement, chosen = S.picks.slice();
-    sheet = el('div', 'sheet-wrap');
-    var box = el('div', 'sheet'); box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-labelledby', 'sheetH');
-    var head = el('div', 'sheet-h'), h = el('h2', '', 'Pick your topics'); h.id = 'sheetH'; head.appendChild(h);
-    var x = el('button', 'sheet-x'); x.type = 'button'; x.setAttribute('aria-label', 'Close'); x.appendChild(icon('x')); head.appendChild(x); box.appendChild(head);
-    box.appendChild(el('p', 'sheet-p', 'Choose what you love to read. We’ll keep you updated on these every hour. Your choice stays on this device, and you can change it any time.'));
-    var g = el('div', 'tgrid');
-    TOPICS.forEach(function (t) {
-      var b = el('button', 'tpick'); b.type = 'button'; b.setAttribute('aria-pressed', chosen.indexOf(t[0]) > -1 ? 'true' : 'false');
-      b.appendChild(ic(t[1])); b.appendChild(el('span', '', t[0])); var ck = el('i', 'tck'); ck.appendChild(icon('check')); b.appendChild(ck);
-      b.addEventListener('click', function () { var i = chosen.indexOf(t[0]); if (i > -1) chosen.splice(i, 1); else chosen.push(t[0]); b.setAttribute('aria-pressed', i > -1 ? 'false' : 'true'); done.textContent = chosen.length ? 'Show my ' + chosen.length + ' topic' + (chosen.length > 1 ? 's' : '') : 'Show everything'; });
-      g.appendChild(b);
-    });
-    box.appendChild(g);
-    var acts = el('div', 'sheet-a'), clear = el('button', 'btn btn-sec', 'Clear'); clear.type = 'button';
-    var done = el('button', 'btn btn-pri', chosen.length ? 'Show my ' + chosen.length + ' topic' + (chosen.length > 1 ? 's' : '') : 'Show everything'); done.type = 'button';
-    clear.addEventListener('click', function () { chosen = []; Array.prototype.forEach.call(g.children, function (b) { b.setAttribute('aria-pressed', 'false'); }); done.textContent = 'Show everything'; });
-    acts.appendChild(clear); acts.appendChild(done); box.appendChild(acts);
-    sheet.appendChild(box); document.body.appendChild(sheet);
-    var close = function () { if (!sheet) return; sheet.remove(); sheet = null; document.removeEventListener('keydown', key, true); if (back && back.focus) back.focus(); };
-    var key = function (e) { if (e.key === 'Escape') { e.preventDefault(); close(); } else if (e.key === 'Tab') { var f = box.querySelectorAll('button'), a = f[0], z = f[f.length - 1]; if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); } else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); } } };
-    document.addEventListener('keydown', key, true);
-    sheet.addEventListener('click', function (e) { if (e.target === sheet) close(); });
-    x.addEventListener('click', close);
-    done.addEventListener('click', function () { S.picks = chosen.slice(); save(S.picks); close(); pick(S.picks.length ? 'For you' : 'All'); toast(S.picks.length ? 'Showing your topics' : 'Showing everything'); });
-    requestAnimationFrame(function () { sheet.classList.add('on'); (g.querySelector('[aria-pressed="true"]') || g.firstChild).focus(); });
-  }
-
-  // ---- the side panel (computers): what Paiir is, then where the news comes from ----
-  function side() {
-    var box = $('side'); if (!box) return; box.textContent = '';
-    var c = el('div', 'card'), m = el('div', 'card-mark'), img = el('img'); img.src = '{{PATH}}brand/paiir-mark.svg'; img.alt = ''; m.appendChild(img); m.appendChild(el('b', '', 'Sell what you know. Find who you need.')); c.appendChild(m);
-    c.appendChild(el('p', '', 'Paiir is one link where experts sell calls, courses and templates, and where people find the right expert to talk to.'));
-    var ul = el('ul');
-    [['link', 'Sell from one link', 'Calls, courses, templates', '#products'], ['users', 'Find a mentor', 'Coming soon', '#experts'], ['rocket', 'Founder Hub', 'Grants and schemes, free', '#founder-hub'], ['bridge', 'Paiir Bridge', 'Early access is open', '#bridge']].forEach(function (x) {
-      var li = el('li'), a = el('a'); a.href = HOME + x[3]; a.appendChild(ic(x[0])); var t = el('span', '', x[1]); t.appendChild(el('small', '', x[2])); a.appendChild(t); li.appendChild(a); ul.appendChild(li);
-    });
-    c.appendChild(ul);
-    var go = el('a', 'btn btn-pri', 'Visit paiir.in'); go.href = HOME; c.appendChild(go); box.appendChild(c);
-    box.appendChild(adBlock('card ad-card'));
-    var src = (S.data && S.data.sources) || [];
-    if (src.length) {
-      var d = el('div', 'card'); d.appendChild(el('p', 'card-h', 'From ' + src.length + ' trusted sources'));
-      var g = el('div', 'srcs'); src.forEach(function (x) { var s = el('span'); s.appendChild(favicon(x.name, x.domain)); s.appendChild(document.createTextNode(x.name)); g.appendChild(s); });
-      d.appendChild(g); box.appendChild(d);
+    if (it.p) {
+      var p = it.p;
+      return '<article class="c' + (p.ad ? ' is-ad' : '') + '" aria-label="' + esc(p.t) + '"><span class="c-pic c-pa" aria-hidden="true"><span class="pa-ic">' + ic(p.ic) + '</span></span>' +
+        '<div class="c-body"><p class="c-k c-pk"><b>' + (p.ad ? 'Sponsored' : 'From Paiir') + '</b><span>' + esc(p.k) + '</span></p><h2 class="c-h">' + esc(p.t) + '</h2><p class="c-sum">' + esc(p.p) + '</p>' +
+        (p.ad ? '<button type="button" class="go c-go" data-adv>' : '<a class="go c-go" href="' + esc(p.h) + '">') + esc(p.b) + ic('arrow') + (p.ad ? '</button>' : '</a>') + '</div></article>';
     }
+    if (it.wait) return '<article class="c c-sk" aria-label="Loading the news"><span class="c-pic"></span><div class="c-body"><i></i><i></i><i></i><i></i><i></i></div></article>';
+    if (it.err) return '<article class="c"><div class="c-end"><span class="end-ic">' + ic('refresh') + '</span><h2>The news didn’t load</h2><p>Please check your internet and try again. Every story stays linked to its publisher.</p><button type="button" class="go" data-retry>Try again</button></div></article>';
+    var has = R.total > 0;
+    return '<article class="c"><div class="c-end"><span class="end-ic">' + ic(has ? 'ccheck' : 'news') + '</span>' +
+      '<h2>' + (has ? 'You’re all caught up.' : 'No stories in ' + esc(R.cat) + ' right now.') + '</h2>' +
+      '<p>' + (has ? 'Fresh stories arrive every hour. Take a break and rest your eyes.' : 'New stories arrive every hour. Have a look at everything else meanwhile.') + '</p>' +
+      (has ? '<button type="button" class="go" data-first><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(180deg)">' + ICONS.chev + '</svg>Back to the first story</button>' : '<button type="button" class="go" data-cat="">Show all news</button>') +
+      '<div class="end-l"><a href="' + esc(HOME) + '#grants">' + ic('gift') + 'Grants</a><a href="' + esc(HOME) + '#events">' + ic('cal') + 'Events</a><a href="' + esc(HOME) + '#jobs">' + ic('brief') + 'Startup Jobs</a><a href="' + esc(HOME) + '">' + ic('home') + 'paiir.in</a></div></div></article>';
   }
 
-  // ---- Explore Paiir, at the end of the page (computers) ----
-  (function () {
-    var w = el('div', 'nw'), h = el('h2', 'ex-h', 'Explore Paiir.'); h.id = 'exploreH'; w.appendChild(h);
-    var p = el('p', 'ex-p', 'Sell what you know.'); p.appendChild(el('span', 'hl', ' Find who you need.')); w.appendChild(p);
-    var g = el('div', 'ex-grid');
-    EXPLORE.forEach(function (x) {
-      var c = el('div', 'ex-c'); c.appendChild(ic(x[0]));
-      var chip = el('span', 'ex-chip'); chip.appendChild(el('i')); chip.appendChild(document.createTextNode(x[2])); c.appendChild(chip);
-      c.appendChild(el('b', '', x[1])); c.appendChild(el('p', '', x[3]));
-      var a = el('a', 'ex-go', x[5]); a.href = HOME + x[4]; a.appendChild(icon('arrow')); c.appendChild(a); g.appendChild(c);
+  // ---- the deck keeps three slides: the one before (lifted away above), the one showing, and the next (underneath)
+  function node(k) {
+    var el = deck.querySelector('[data-k="' + k + '"]');
+    if (!el && R.items[k]) { el = document.createElement('div'); el.className = 's ' + (k < R.i ? 'is-prev' : k > R.i ? 'is-next' : 'is-cur'); el.dataset.k = k; el.innerHTML = slide(R.items[k]); deck.appendChild(el); }
+    return el;
+  }
+  function lay() {
+    var keep = {}; [R.i - 1, R.i, R.i + 1].forEach(function (k) { if (k >= 0 && k < R.items.length) keep[k] = 1; });
+    $$('.s', deck).forEach(function (el) { if (!keep[el.dataset.k]) el.remove(); });
+    Object.keys(keep).forEach(function (k) {
+      k = +k; var el = node(k), cur = k === R.i;
+      el.className = 's ' + (k < R.i ? 'is-prev' : k > R.i ? 'is-next' : 'is-cur');
+      el.style.transition = ''; el.style.transform = ''; el.style.filter = '';
+      el.setAttribute('aria-hidden', cur ? 'false' : 'true'); el.inert = !cur;
+      clip(el);
     });
-    w.appendChild(g); $('explore').appendChild(w);
-  })();
+    var it = R.items[R.i];
+    $$('[data-go]').forEach(function (b) { b.disabled = +b.dataset.go < 0 ? R.i === 0 : R.i >= R.items.length - 1; });
+    if (it && it.s) body(it.s); // the full story is ready before anyone asks for it
+  }
+  function clip(el) { var b = el.querySelector('.c-body'); if (b) b.classList.toggle('c-clip', b.scrollHeight > b.clientHeight + 2); }
+  function reset() { // a new list (first load, or another topic): back to the first story
+    R.items = R.data && R.data.stories ? buildItems() : [R.data && R.data.error ? { err: 1 } : { wait: 1 }];
+    R.i = 0; deck.innerHTML = ''; lay();
+  }
+  function go(dir) {
+    var j = R.i + dir;
+    if (R.busy || j < 0 || j >= R.items.length) return;
+    R.busy = 1; R.i = j; lay(); tipDone();
+    setTimeout(function () { R.busy = 0; }, 400);
+  }
+  function first() { R.i = 0; deck.innerHTML = ''; lay(); }
+  function pickCat(c) {
+    R.cat = c || ''; shared = null; $$('[data-cat]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-cat') === R.cat ? 'true' : 'false'); });
+    $('topicName').textContent = R.cat || 'All news'; reset();
+  }
 
-  // ---- Dim light: a warmer, softer palette for tired eyes, remembered on this device ----
-  (function () {
-    var b = $('dimBtn'), care = document.querySelector('[data-dim]'), note = document.querySelector('[data-dimnote]'), root = document.documentElement;
-    var set = function (on) {
-      root.classList.toggle('dim', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
-      if (care) { care.setAttribute('aria-pressed', on ? 'true' : 'false'); note.textContent = on ? 'Dim light is on. Rest easy' : 'Turn on Dim light'; }
-      var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = on ? '#14110D' : '#0E1014';
+  // the publisher's longer feed text, from the story's own page on Paiir News (fetched once, kept for this visit)
+  function body(s) {
+    if (R.body[s.id]) return R.body[s.id];
+    R.body[s.id] = fetch(PATH + 's/' + encodeURIComponent(s.id)).then(function (r) { return r.ok ? r.text() : ''; }).then(function (h) {
+      var doc = new DOMParser().parseFromString(h, 'text/html');
+      return $$('.sp-body p', doc).map(function (p) { return p.textContent.trim(); }).filter(Boolean);
+    }).catch(function () { delete R.body[s.id]; return []; });
+    return R.body[s.id];
+  }
+
+  // ---- the two side panels: the full story (from the right) and Discover (from the left). Each one adds a step to
+  // the browser's history, so the phone's back button closes it.
+  var OV = { full: { el: $('full'), p: $('fullP'), from: 1 }, disc: { el: $('disc'), p: document.querySelector('.disc-p'), from: -1 } };
+  function onNow() { return OV.full.el.classList.contains('open') ? 'full' : OV.disc.el.classList.contains('open') ? 'disc' : ''; }
+  function fillFull(s) {
+    R.open = s.id; var im = pic(s, '');
+    OV.full.p.innerHTML = '<div class="full-top"><button type="button" class="back" data-close>' + ic('chev') + 'Back</button><span class="full-src">' + esc(s.source) + '</span>' +
+      '<button type="button" class="ib" data-share aria-label="Share this story">' + ic('share') + '</button></div>' +
+      '<div class="full-sc">' + (im ? '<span class="full-pic">' + im + '</span>' : '') +
+      '<div class="full-in"><p class="c-k"><b>' + esc(s.category || 'News') + '</b><span>' + esc(s.source) + ' · ' + esc(age(s.published)) + '</span></p>' +
+      '<h2 class="full-t" id="fullT">' + esc(s.title) + '</h2><div class="full-body" id="fullB"><i></i><i></i><i></i><i></i></div>' +
+      (safe(s.link) ? '<a class="go full-go" href="' + esc(safe(s.link)) + '" target="_blank" rel="noopener noreferrer">Read it all at ' + esc(s.source) + ic('ext') + '</a>' : '') +
+      '<p class="full-note">From ' + esc(s.source) + '’s own feed. The full story and its pictures belong to ' + esc(s.source) + '.</p>' +
+      '<button type="button" class="go go-2 full-next" data-next>Next story' + ic('chev') + '</button></div></div>';
+    body(s).then(function (ps) { var b = $('fullB'); if (b && R.open === s.id) b.innerHTML = (ps.length ? ps : [s.summary || s.snippet]).map(function (p) { return '<p>' + esc(p) + '</p>'; }).join(''); });
+  }
+  function prep(name) {
+    var it = R.items[R.i];
+    if (name === 'full') { if (!it || !it.s) return false; if (R.open !== it.s.id || !$('fullT')) fillFull(it.s); }
+    return true;
+  }
+  function open(name, dragged) {
+    closePop(); var o = OV[name], other = onNow(); if (other && other !== name) return;
+    if (!prep(name)) return;
+    o.el.hidden = false; root.classList.add('ov-on');
+    if (!dragged) { o.p.style.transition = 'none'; o.p.style.transform = ''; void o.p.offsetWidth; }
+    o.p.style.transition = ''; o.p.style.transform = ''; o.el.classList.add('open');
+    var cur = node(R.i); if (cur && !wide.matches) { cur.style.transition = ''; cur.style.transform = 'translateX(' + (-o.from * 16) + '%)'; cur.style.filter = 'brightness(.85)'; }
+    if (!(history.state && history.state.ov)) history.pushState({ ov: name }, '');
+    tipDone();
+    // keys: focus Back (with its ring); a touch or a click: focus the panel itself, so no ring appears on Back
+    var f = R.kb ? o.p.querySelector('[data-close]') : o.p; if (!R.kb) o.p.tabIndex = -1; if (f) f.focus({ preventScroll: true });
+  }
+  function close(viaBack) {
+    var name = onNow(); if (!name) return;
+    if (!viaBack && history.state && history.state.ov) { history.back(); return; } // popstate (below) closes it
+    var o = OV[name]; o.p.style.transition = ''; o.p.style.transform = ''; o.el.classList.remove('open');
+    var cur = node(R.i); if (cur) { cur.style.transition = ''; cur.style.transform = ''; cur.style.filter = ''; }
+    setTimeout(function () { if (!o.el.classList.contains('open')) { o.el.hidden = true; if (!onNow()) root.classList.remove('ov-on'); } }, 420);
+    deck.focus({ preventScroll: true });
+  }
+  window.addEventListener('popstate', function () { if (onNow()) close(true); });
+
+  // ---- swipes (touch and pen; a mouse uses the wheel, the keys and the buttons). On the deck: up and down move between
+  // stories, left pulls the full story in, right pulls Discover in. On a panel: a swipe back the way it came closes it.
+  function swipes(el, panel) {
+    var g = null;
+    el.addEventListener('pointerdown', function (e) {
+      R.dragged = false;
+      if (e.pointerType === 'mouse' || e.button > 0 || (!panel && R.busy)) return;
+      g = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), ax: '' };
+    });
+    el.addEventListener('pointermove', function (e) {
+      if (!g || e.pointerId !== g.id) return;
+      var dx = e.clientX - g.x, dy = e.clientY - g.y;
+      if (!g.ax) {
+        if (Math.abs(dx) < 9 && Math.abs(dy) < 9) return;
+        g.ax = Math.abs(dx) > Math.abs(dy) * 1.15 ? 'x' : 'y';
+        if (panel && g.ax === 'y') { g = null; return; } // a panel scrolls by itself
+        if (!panel && g.ax === 'x' && dx < 0 && !(R.items[R.i] && R.items[R.i].s)) { g = null; return; } // Paiir cards have no full story
+        R.dragged = true; try { el.setPointerCapture(g.id); } catch (x) {}
+        g.to = panel || (g.ax === 'y' ? 'y' : dx < 0 ? 'full' : 'disc');
+        if (!panel && g.to !== 'y') { prep(g.to); OV[g.to].el.hidden = false; OV[g.to].el.classList.add('drag'); }
+      }
+      g.dx = dx; g.dy = dy;
+      if (panel) pullBack(panel, dx); else if (g.to === 'y') pullY(dy); else pullIn(g.to, dx);
+    });
+    var end = function (e) {
+      if (!g || e.pointerId !== g.id) return;
+      var gg = g; g = null; if (!gg.ax) return;
+      var dt = Math.max(1, performance.now() - gg.t), cancel = e.type === 'pointercancel';
+      if (panel) return dropBack(panel, gg.dx || 0, (gg.dx || 0) / dt, cancel);
+      if (gg.to === 'y') dropY(gg.dy || 0, (gg.dy || 0) / dt, cancel); else dropIn(gg.to, gg.dx || 0, (gg.dx || 0) / dt, cancel);
     };
-    var flip = function () { var on = !root.classList.contains('dim'); set(on); try { localStorage.setItem('paiir-news-dim', on ? '1' : '0'); } catch (e) {} toast(on ? 'Dim light on. Easier on your eyes' : 'Dim light off'); };
-    set(root.classList.contains('dim'));
-    b.addEventListener('click', flip); if (care) care.addEventListener('click', flip);
-    var tp = document.querySelector('[data-topics]'); if (tp) tp.addEventListener('click', openPicker);
-    var ad = document.querySelector('[data-advertise]'); if (ad) ad.addEventListener('click', openAdvertise);
-  })();
-
-  // ---- sharing: a Paiir link. Its preview shows the story's picture; it opens the story on Paiir News first ----
-  var menu = null;
-  function shareUrl(id) { return NEWS + 's/' + encodeURIComponent(id); }
-  function closeMenu(focusBack) { if (!menu) return; var b = menu._btn; menu.remove(); menu = null; document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', keys, true); if (b) { b.setAttribute('aria-expanded', 'false'); if (focusBack) b.focus(); } }
-  function outside(e) { if (menu && !menu.contains(e.target) && !menu._btn.contains(e.target)) closeMenu(false); }
-  function keys(e) {
-    if (!menu) return;
-    if (e.key === 'Escape') { e.preventDefault(); closeMenu(true); return; }
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); var it = Array.prototype.slice.call(menu.querySelectorAll('a,button')), i = it.indexOf(document.activeElement); it[(i + (e.key === 'ArrowDown' ? 1 : -1) + it.length) % it.length].focus(); }
+    el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
   }
-  function toast(t) { toastEl.textContent = t; toastEl.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(function () { toastEl.classList.remove('on'); }, 2000); }
+  function pullY(dy) {
+    var H = deck.clientHeight, cur = node(R.i), nx = R.items[R.i + 1] && node(R.i + 1), pv = R.i > 0 && node(R.i - 1);
+    [cur, nx, pv].forEach(function (el) { if (el) el.style.transition = 'none'; });
+    if (dy < 0) {
+      if (!nx) { cur.style.transform = 'translateY(' + dy * 0.25 + 'px)'; return; }
+      var q = Math.min(1, -dy / H);
+      cur.style.transform = 'translateY(' + dy + 'px)';
+      nx.style.transform = 'scale(' + (0.94 + 0.06 * q) + ')'; nx.style.filter = 'brightness(' + (0.94 + 0.06 * q) + ')';
+      if (pv) pv.style.transform = '';
+    } else {
+      if (!pv) { cur.style.transform = 'translateY(' + dy * 0.25 + 'px)'; return; }
+      var r = Math.min(1, dy / H);
+      pv.style.transform = 'translateY(' + (dy - H * 1.06) + 'px)';
+      cur.style.transform = 'scale(' + (1 - 0.06 * r) + ')'; cur.style.filter = 'brightness(' + (1 - 0.06 * r) + ')';
+      if (nx) nx.style.transform = '';
+    }
+  }
+  function dropY(dy, v, cancel) {
+    var H = deck.clientHeight, far = Math.abs(dy) > H * 0.16 || Math.abs(v) > 0.45;
+    if (!cancel && far && dy < 0 && R.i < R.items.length - 1) return go(1);
+    if (!cancel && far && dy > 0 && R.i > 0) return go(-1);
+    lay(); // back where it was
+  }
+  function pullIn(name, dx) {
+    var o = OV[name], cur = node(R.i), d = o.from > 0 ? Math.min(0, dx) : Math.max(0, dx);
+    o.p.style.transition = 'none'; o.p.style.transform = 'translateX(calc(' + (o.from > 0 ? '100%' : '-104%') + ' + ' + d + 'px))';
+    if (cur) { cur.style.transition = 'none'; cur.style.transform = 'translateX(' + d * 0.16 + 'px)'; }
+  }
+  function dropIn(name, dx, v, cancel) {
+    var o = OV[name], W = deck.clientWidth, d = o.from > 0 ? -dx : dx;
+    if (!cancel && (d > W * 0.22 || (d > 30 && Math.abs(v) > 0.4))) { o.el.classList.remove('drag'); return open(name, true); }
+    var cur = node(R.i);
+    o.p.style.transition = ''; o.p.style.transform = 'translateX(' + (o.from > 0 ? '100%' : '-104%') + ')';
+    if (cur) { cur.style.transition = ''; cur.style.transform = ''; }
+    setTimeout(function () { if (!o.el.classList.contains('open')) { o.el.classList.remove('drag'); o.el.hidden = true; o.p.style.transform = ''; } }, 420);
+  }
+  function pullBack(name, dx) { // only toward the side it came from
+    var o = OV[name], d = o.from > 0 ? Math.max(0, dx) : Math.min(0, dx);
+    o.p.style.transition = 'none'; o.p.style.transform = 'translateX(' + d + 'px)';
+  }
+  function dropBack(name, dx, v, cancel) {
+    var o = OV[name], W = o.p.offsetWidth, d = o.from > 0 ? dx : -dx;
+    if (!cancel && (d > W * 0.22 || (d > 30 && Math.abs(v) > 0.4))) return close();
+    o.p.style.transition = ''; o.p.style.transform = '';
+  }
+
+  // ---- the first visit: how to read, once
+  function tip() {
+    if (store('paiir-news-tip') || $('tip')) return;
+    var st = deck.querySelector('.s.is-cur .c-pic'); if (!st || !R.total || deck.querySelector('.s.is-cur .no-img')) return;
+    var t = document.createElement('div'); t.className = 'tip'; t.id = 'tip'; t.setAttribute('role', 'note');
+    t.innerHTML = touch.matches || !wide.matches
+      ? '<span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(180deg)">' + ICONS.chev + '</svg>Swipe up for the next story</span><span>' + ic('chevL') + 'Swipe left for the full story</span><span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(180deg)">' + ICONS.chevL + '</svg>Swipe right for topics</span>'
+      : '<span><kbd>↓</kbd>Scroll or press the down arrow for the next story</span><span><kbd>→</kbd>The right arrow opens the full story</span>';
+    st.appendChild(t); setTimeout(tipDone, 8000);
+  }
+  function tipDone() { var t = $('tip'); if (!t) return; store('paiir-news-tip', '1'); t.classList.add('out'); setTimeout(function () { t.remove(); }, 300); }
+
+  // ---- sharing: the story's Paiir link (its preview shows the story's picture; it opens the story here first)
+  var toastEl = $('toast');
+  function toast(t) { toastEl.textContent = t; toastEl.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(function () { toastEl.classList.remove('on'); }, 2400); }
+  var menu = null;
+  function closeMenu() { if (!menu) return; menu.remove(); menu = null; document.removeEventListener('pointerdown', menuOut, true); }
+  function menuOut(e) { if (menu && !menu.contains(e.target) && !(menu._btn && menu._btn.contains(e.target))) closeMenu(); }
   function copy(u) {
     var done = function () { toast('Link copied'); };
     if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(u).then(done, legacy);
     legacy();
-    function legacy() { var ta = el('textarea'); ta.value = u; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) { toast('Copy failed'); } ta.remove(); }
+    function legacy() { var ta = document.createElement('textarea'); ta.value = u; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) { toast('Copy this link: ' + u); } ta.remove(); }
   }
-  function share(s, btn) {
-    var url = shareUrl(s.id), e = encodeURIComponent;
-    if (navigator.share && window.matchMedia && matchMedia('(pointer: coarse)').matches) { navigator.share({ title: s.title, text: s.title, url: url }).catch(function () {}); return; }
-    if (menu && menu._btn === btn) return closeMenu(true);
-    closeMenu(false);
-    menu = el('div', 'menu'); menu.setAttribute('role', 'menu'); menu.setAttribute('aria-label', 'Share this story'); menu._btn = btn;
-    [['chat', 'WhatsApp', 'https://wa.me/?text=' + e(s.title + '\n\n' + url)], ['linkedin', 'LinkedIn', 'https://www.linkedin.com/sharing/share-offsite/?url=' + e(url)], ['send', 'X', 'https://x.com/intent/post?text=' + e(s.title) + '&url=' + e(url)]].forEach(function (x) {
-      var a = el('a', '', x[1]); a.href = x[2]; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.setAttribute('role', 'menuitem'); a.insertBefore(icon(x[0]), a.firstChild); a.addEventListener('click', function () { closeMenu(false); }); menu.appendChild(a);
-    });
-    var c = el('button', '', 'Copy link'); c.type = 'button'; c.setAttribute('role', 'menuitem'); c.insertBefore(icon('copy'), c.firstChild); c.addEventListener('click', function () { copy(url); closeMenu(true); }); menu.appendChild(c);
-    menu.appendChild(el('small', '', 'Opens the story on Paiir News'));
+  function share(btn) {
+    var it = R.items[R.i], s = it && it.s; if (!s) return;
+    var url = NEWS + 's/' + encodeURIComponent(s.id), e = encodeURIComponent;
+    if (navigator.share && touch.matches) { navigator.share({ title: s.title, text: s.title, url: url }).catch(function () {}); return; }
+    if (menu) return closeMenu();
+    menu = document.createElement('div'); menu.className = 'menu'; menu.setAttribute('role', 'menu'); menu._btn = btn;
+    menu.innerHTML = [['chat', 'WhatsApp', 'https://wa.me/?text=' + e(s.title + '\n\n' + url)], ['linkedin', 'LinkedIn', 'https://www.linkedin.com/sharing/share-offsite/?url=' + e(url)], ['send', 'X', 'https://x.com/intent/post?text=' + e(s.title) + '&url=' + e(url)]].map(function (x) {
+      return '<a role="menuitem" href="' + esc(x[2]) + '" target="_blank" rel="noopener noreferrer">' + ic(x[0]) + x[1] + '</a>';
+    }).join('') + '<button type="button" role="menuitem" data-copy>' + ic('copy') + 'Copy link</button><small>Opens the story on Paiir News</small>';
     document.body.appendChild(menu);
+    menu.addEventListener('click', function (ev) { if (ev.target.closest('[data-copy]')) copy(url); closeMenu(); });
     var r = btn.getBoundingClientRect(), mw = menu.offsetWidth, mh = menu.offsetHeight;
     menu.style.left = Math.max(12, Math.min(r.right - mw, innerWidth - mw - 12)) + 'px';
-    menu.style.top = Math.max(12, Math.min(innerHeight - mh - 12, r.bottom + 8 + mh > innerHeight - 12 ? r.top - mh - 8 : r.bottom + 8)) + 'px';
-    btn.setAttribute('aria-expanded', 'true');
-    document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', keys, true);
-    menu.querySelector('a,button').focus();
+    menu.style.top = Math.max(12, r.top - mh - 8 > 12 ? r.top - mh - 8 : r.bottom + 8) + 'px';
+    document.addEventListener('pointerdown', menuOut, true);
+    menu.querySelector('a').focus();
   }
-  window.addEventListener('scroll', function () { if (menu) closeMenu(false); }, { passive: true });
-  if (pager) pager.addEventListener('scroll', function () { if (menu) closeMenu(false); }, { passive: true });
 
-  // ---- load ----
-  if (S.picks.length) S.cat = 'For you';
-  // a topic link from a story page (?t=AI) opens that topic
-  var askT = ask.get('t'); if (askT && TOPICS.some(function (x) { return x[0] === askT; })) S.cat = askT;
-  drawChips();
-  $('today').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
-  function tick() { if (S.data) updated.textContent = 'Updated ' + ago(S.data.updated); }
-  function skeleton() {
-    feed.textContent = ''; feed.setAttribute('aria-busy', 'true');
-    var l = el('div', 'lead skel'), im = el('div', 'lead-img'), q0 = el('div', 'sk'); q0.style.height = '100%'; im.appendChild(q0); l.appendChild(im); feed.appendChild(l);
-    for (var i = 0; i < 4; i++) {
-      var r = el('div', 'row skel'), a = el('div', 'row-a'), b = el('div', 'row-b');
-      [['30%', 14], ['92%', 20], ['70%', 20]].forEach(function (w) { var x = el('div', 'sk'); x.style.width = w[0]; x.style.height = w[1] + 'px'; b.appendChild(x); });
-      var p = el('div', 'row-img'), q = el('div', 'sk'); q.style.height = '100%'; p.appendChild(q); a.appendChild(b); a.appendChild(p); r.appendChild(a); feed.appendChild(r);
-    }
+  // ---- advertise with us: a short form that reaches the Paiir team (Admin > Forms, kind news-advertise)
+  var sheet = null;
+  function openAdvertise() {
+    if (sheet) return;
+    closePop(); var back = document.activeElement;
+    sheet = document.createElement('div'); sheet.className = 'sheet-wrap';
+    sheet.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="adH"><div class="sheet-h"><h2 id="adH">Advertise on Paiir News</h2><button type="button" class="ib" data-x aria-label="Close">' + ic('x') + '</button></div>' +
+      '<p class="sheet-p">Tell us a little about what you’d like to promote. The Paiir team replies within 2 working days with the options that fit.</p>' +
+      '<form class="af-form" novalidate><div class="af-two"><label class="af"><span class="af-l">Your name</span><input name="name" autocomplete="name" maxlength="120"></label><label class="af"><span class="af-l">Work email</span><input name="email" type="email" autocomplete="email" required></label></div>' +
+      '<label class="af"><span class="af-l">Company or brand</span><input name="company" autocomplete="organization" maxlength="120"></label>' +
+      '<label class="af"><span class="af-l">What would you like to promote?</span><textarea name="message" rows="3" maxlength="1000" placeholder="A product, an event, a hiring drive…"></textarea></label>' +
+      '<input name="website" class="af-hp" tabindex="-1" autocomplete="off" aria-hidden="true"><p class="af-err" role="alert"></p>' +
+      '<button type="submit" class="go">Send to the Paiir team</button><small class="af-note">Or write to ' + MAIL + '. We never share your details.</small></form></div>';
+    document.body.appendChild(sheet);
+    var box = sheet.querySelector('.sheet'), f = sheet.querySelector('form'), err = f.querySelector('.af-err'), btn = f.querySelector('[type=submit]');
+    var shut = function () { if (!sheet) return; sheet.remove(); sheet = null; document.removeEventListener('keydown', key, true); if (back && back.focus) back.focus(); };
+    var key = function (e) { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); shut(); } };
+    document.addEventListener('keydown', key, true);
+    sheet.addEventListener('click', function (e) { if (e.target === sheet || e.target.closest('[data-x]')) shut(); });
+    f.addEventListener('input', function () { err.textContent = ''; });
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var v = function (n) { return f.elements[n].value.trim(); }, em = v('email');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { err.textContent = 'Please add an email we can reply to.'; f.elements.email.focus(); return; }
+      btn.disabled = true; btn.textContent = 'Sending…';
+      fetch('/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'news-advertise', email: em, name: v('name'), detail: v('company'), data: { company: v('company'), message: v('message'), from: 'Paiir News' }, page: location.pathname, website: f.elements.website.value }) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok || !j.ok) throw new Error('send'); }); })
+        .then(function () { box.innerHTML = '<div class="af-done"><span class="end-ic">' + ic('check') + '</span><h2>Thank you. We’ve got it.</h2><p class="sheet-p">The Paiir team will write to ' + esc(em) + ' within 2 working days.</p><button type="button" class="go go-2" data-x>Back to the news</button></div>'; box.querySelector('[data-x]').focus(); })
+        .catch(function () { btn.disabled = false; btn.textContent = 'Send to the Paiir team'; err.textContent = 'We couldn’t send this just now. Please try again, or write to ' + MAIL + '.'; });
+    });
+    requestAnimationFrame(function () { if (sheet) { sheet.classList.add('on'); f.elements.name.focus(); } });
   }
-  function stateBox(title, text, btnLabel, onClick) {
-    var box = el('div', 'state'); box.appendChild(el('b', '', title)); if (text) box.appendChild(el('p', '', text));
-    if (btnLabel) { var b = el('button', 'btn btn-sec', btnLabel); b.type = 'button'; b.insertBefore(icon('refresh'), b.firstChild); b.addEventListener('click', onClick); box.appendChild(b); }
-    return box;
-  }
-  function fetchNews() {
-    skeleton(); more.hidden = true;
-    fetch('{{PATH}}news.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (d) {
+
+  // ---- wiring
+  swipes(deck, ''); swipes(OV.full.p, 'full'); swipes(OV.disc.p, 'disc');
+  // a mouse wheel or a trackpad: one story per flick (a trackpad keeps sending after the fingers lift)
+  deck.addEventListener('wheel', function (e) {
+    if (Math.abs(e.deltaY) < Math.abs(e.deltaX)) return;
+    e.preventDefault();
+    var now = performance.now(), w = R.wheel;
+    if (Math.abs(e.deltaY) < 6) return;
+    if (now < w.until) { if (now - w.step < 1000) w.until = now + 180; return; }
+    w.step = now; w.until = now + 450; go(e.deltaY > 0 ? 1 : -1);
+  }, { passive: false });
+  // a swipe that ends on a button shouldn't press it
+  document.addEventListener('click', function (e) { if (R.dragged) { e.preventDefault(); e.stopPropagation(); R.dragged = false; } }, true);
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest && e.target.closest('[data-full],[data-share],[data-close],[data-next],[data-go],[data-first],[data-cat],[data-retry],[data-light-set],[data-adv],[data-top]');
+    if (!t) return;
+    if (t.hasAttribute('data-full')) return open('full');
+    if (t.hasAttribute('data-share')) return share(t);
+    if (t.hasAttribute('data-close')) return close();
+    if (t.hasAttribute('data-next')) { close(); return setTimeout(function () { go(1); }, 160); }
+    if (t.hasAttribute('data-go')) return go(+t.dataset.go);
+    if (t.hasAttribute('data-first')) return first();
+    if (t.hasAttribute('data-top')) { e.preventDefault(); if (onNow()) close(); return R.cat || shared ? pickCat('') : first(); }
+    if (t.hasAttribute('data-light-set')) { setLight(t.getAttribute('data-light-set'), true); if (pop) setTimeout(closePop, 180); return; }
+    if (t.hasAttribute('data-adv')) { if (onNow() === 'disc') close(); return openAdvertise(); }
+    if (t.hasAttribute('data-retry')) { R.data = null; reset(); return load(); }
+    // a topic: from Discover it closes the panel and shows the topic's first story
+    var c = t.getAttribute('data-cat') || '';
+    if (onNow() === 'disc') { close(); setTimeout(function () { pickCat(c); }, 120); } else pickCat(c);
+  });
+  $('topicBtn').addEventListener('click', function () { open('disc'); });
+  $('lightBtn').addEventListener('click', openPop);
+  document.addEventListener('keydown', function (e) {
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || sheet) return;
+    var tg = e.target, k = e.key;
+    if (tg && (tg.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName))) return;
+    if (k === 'Escape' && (pop || menu)) { closePop(); closeMenu(); return; }
+    var on = onNow();
+    if (on) { if (k === 'Escape' || (on === 'full' && k === 'ArrowLeft') || (on === 'disc' && k === 'ArrowRight')) { e.preventDefault(); close(); } return; }
+    var plain = tg === document.body || tg === deck;
+    if (k === 'ArrowDown' || k === 'PageDown' || k === 'j' || (k === ' ' && plain)) { e.preventDefault(); go(1); }
+    else if (k === 'ArrowUp' || k === 'PageUp' || k === 'k') { e.preventDefault(); go(-1); }
+    else if (k === 'ArrowRight' || (k === 'Enter' && plain)) { e.preventDefault(); open('full'); }
+    else if (k === 'ArrowLeft' && !wide.matches) { e.preventDefault(); open('disc'); }
+    else if (k === 'Home') { e.preventDefault(); first(); }
+  });
+  window.addEventListener('resize', function () { closePop(); closeMenu(); $$('.s', deck).forEach(clip); });
+  document.addEventListener('pointerdown', function () { R.kb = false; }, true);
+  document.addEventListener('keydown', function () { R.kb = true; }, true);
+
+  function load() {
+    return fetch(PATH + 'news.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (d) {
       if (!d || !Array.isArray(d.stories) || !d.stories.length) throw new Error('empty');
-      S.data = d; S.n = STEP; tick(); render(); side();
-    }).catch(function () {
-      feed.textContent = ''; feed.setAttribute('aria-busy', 'false'); updated.textContent = 'Couldn’t load the news';
-      var box = stateBox('The news didn’t load', 'Check your connection and try again. Every story stays linked to its publisher.', 'Try again', fetchNews);
-      if (phone.matches) { document.body.classList.add('cards'); pager.textContent = ''; var c = el('article', 'pc pc-paiir'), w = el('div', 'pc-pin'); w.appendChild(box); c.appendChild(w); pager.appendChild(c); } else feed.appendChild(box);
+      R.data = d;
+    }).catch(function () { R.data = { error: 1 }; }).then(function () {
+      var t = ask.get('t'); if (t && cats().some(function (c) { return c[0] === t; })) R.cat = t;
+      drawPanels(); reset(); tip();
     });
   }
-  setInterval(tick, 60000);
-  fetchNews();
+  drawPanels(); reset(); load();
   // "Advertise with us" on a story page comes here with ?advertise=1
   if (ask.get('advertise')) openAdvertise();
 })();

@@ -177,6 +177,8 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&a
 // publishers' full text and photos would need their permission. The same page carries the preview tags for WhatsApp,
 // LinkedIn and X. story.js adds the related stories (from news.json), Dim light, share and "2h ago".
 const SP_TIME = { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' };
+// the reading light (Light, Dim, Warm): the reader's choice, else paiir.in's dark mode, else the phone's setting
+const LIGHT_JS = "(function () { var l = 'light', d = document.documentElement; try { l = localStorage.getItem('paiir-news-light') || (localStorage.getItem('paiir-news-dim') === '1' || localStorage.getItem('paiirScheme') === 'dark' ? 'dim' : (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dim' : 'light')); } catch (e) {} if (!/^(light|dim|warm)$/.test(l)) l = 'light'; d.setAttribute('data-light', l); var m = document.querySelector('meta[name=\"theme-color\"]'); if (m) m.content = { light: '#F3F4F6', dim: '#0E1014', warm: '#F0E7D8' }[l]; })();";
 export function storyPage(st, base, home, ogDefault, ver) {
   // the page's own files load from this site's path (paiir.in and www.paiir.in alike), versioned so a release shows at once
   const at = new URL(base.replace(/\/+$/, '') + '/').pathname, v = ver ? '?v=' + encodeURIComponent(ver) : '';
@@ -197,18 +199,19 @@ export function storyPage(st, base, home, ogDefault, ver) {
   const data = JSON.stringify({ id: st.id, category: cat, tags, title: st.title, published: st.published || '' }).replace(/</g, '\\u003c');
   return '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n' +
     '<title>' + esc(st.title) + ' · Paiir News</title>\n<meta name="description" content="' + esc(desc) + '">\n<meta name="robots" content="noindex">\n' +
-    '<meta name="theme-color" content="#0E1014"><meta name="color-scheme" content="dark">\n' +
+    '<meta name="theme-color" content="#F3F4F6">\n' +
     '<meta property="og:type" content="article"><meta property="og:site_name" content="Paiir News">\n<meta property="og:title" content="' + esc(st.title) + '">\n<meta property="og:description" content="' + esc(desc) + '">\n' +
     '<meta property="og:image" content="' + esc(img) + '">\n<meta property="og:image:type" content="' + (pic ? 'image/jpeg' : 'image/png') + '"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">\n<meta property="og:url" content="' + esc(url) + '">\n<meta name="twitter:card" content="summary_large_image">\n<meta name="twitter:title" content="' + esc(st.title) + '">\n<meta name="twitter:image" content="' + esc(img) + '">\n' +
     '<link rel="canonical" href="' + esc(url) + '"><link rel="icon" href="' + esc(root + '/brand/paiir-mark.svg') + '" type="image/svg+xml">\n' +
-    '<script>try { if (localStorage.getItem(\'paiir-news-dim\') === \'1\') document.documentElement.classList.add(\'dim\'); } catch (e) {}</script>\n' +
+    // the reading light before the first paint, chosen the same way as on the reader (Light, Dim or Warm)
+    '<script>' + LIGHT_JS + '</script>\n' +
     '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
     '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400..800;1,400..800&amp;display=swap">\n' +
     '<link rel="stylesheet" href="' + esc(at + 'news.css' + v) + '">\n</head>\n<body class="sp-page">\n' +
     '<a class="skip" href="#story">Skip to the story</a>\n' +
-    '<header class="nh"><div class="nw nh-in"><a class="nh-logo" href="' + esc(home) + '" aria-label="Paiir home"><img src="' + esc(at + 'brand/paiir-logo-on-dark.svg') + '" alt="Paiir" width="84" height="40"></a>' +
+    '<header class="nh"><div class="nw nh-in"><a class="nh-logo" href="' + esc(home) + '" aria-label="Paiir home"><img class="lg-l" src="' + esc(at + 'brand/paiir-logo-on-light.svg') + '" alt="Paiir" width="84" height="40"><img class="lg-d" src="' + esc(at + 'brand/paiir-logo-on-dark.svg') + '" alt="Paiir" width="84" height="40"></a>' +
     '<a class="nh-tag" href="' + esc(root + '/') + '"><i aria-hidden="true"></i>News</a><div class="nh-right">' +
-    '<button type="button" class="dim-btn" id="dimBtn" aria-pressed="false" title="A warmer, softer light for reading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg><span>Dim light</span></button>' +
+    '<button type="button" class="dim-btn" id="lightBtn" aria-label="Reading light"><span>Light</span></button>' +
     '<a class="nh-home" href="' + esc(home) + '" aria-label="Paiir home"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\"/><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg><span>Home</span></a></div></div></header>\n' +
     '<main class="nw sp" id="story">\n<a class="sp-back" href="' + esc(root + '/') + '">' + back + 'All news</a>\n<div class="sp-g">\n<article class="sp-art">\n' +
     '<div class="src">' + fav + '<b>' + esc(st.source) + '</b>' + (date ? '<span>·</span><time datetime="' + esc(st.published) + '">' + esc(date) + '</time>' : '') + (cat ? '<span class="cat-sep">·</span><a class="cat" href="' + esc(root + '/?t=' + encodeURIComponent(cat)) + '">' + esc(cat) + '</a>' : '') + '</div>\n' +

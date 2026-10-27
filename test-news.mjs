@@ -147,11 +147,11 @@ t('page addresses are filled in for paiir.in/news', () => {
   const html = fs.readFileSync(path.join(P, 'index.html'), 'utf8'), js = fs.readFileSync(path.join(P, 'news.js'), 'utf8');
   assert.ok(!/\{\{(HOME|BASE|PATH|V)\}\}/.test(html + js));
   assert.ok(html.includes('og:image" content="https://paiir.in/news/brand/og-default.png"'));
-  assert.match(html, /href="\/news\/news\.css\?v=[a-f0-9]{10}"/, 'the stylesheet is versioned, so a release shows at once');
+  assert.match(html, /href="\/news\/reader\.css\?v=[a-f0-9]{10}"/, 'the stylesheet is versioned, so a release shows at once');
   assert.match(html, /src="\/news\/news\.js\?v=[a-f0-9]{10}"/, 'the script is versioned too');
-  assert.ok(js.includes("fetch('/news/news.json?t='"));
+  assert.ok(js.includes("PATH = '/news/'") && js.includes("fetch(PATH + 'news.json?t='"));
   assert.ok(js.includes("NEWS = 'https://paiir.in/news/'") && js.includes("HOME = 'https://paiir.in/'"));
-  assert.ok(html.includes('href="https://paiir.in/#bridge"'));
+  assert.ok(html.includes('href="https://paiir.in/"'), 'a way back to paiir.in');
 });
 fs.rmSync(OUT, { recursive: true, force: true });
 console.log('\n' + passed + ' checks passed');
